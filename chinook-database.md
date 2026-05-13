@@ -2,7 +2,6 @@
 
 Chinook은 SQL Server, Oracle, MySQL 등 다양한 DBMS에서 사용할 수 있는 샘플 데이터베이스입니다. SQL 스크립트 하나만 실행하면 바로 생성할 수 있으며, 기존의 Northwind 데이터베이스의 대안으로 만들어졌습니다. 단일 및 다중 데이터베이스 서버를 대상으로 하는 ORM 도구의 데모 및 테스트에 적합합니다.
 
----
 
 ## 지원 데이터베이스
 
@@ -13,7 +12,6 @@ Chinook은 SQL Server, Oracle, MySQL 등 다양한 DBMS에서 사용할 수 있�
 - SQL Server
 - SQLite
 
----
 
 ## 다운로드
 
@@ -21,7 +19,6 @@ Chinook은 SQL Server, Oracle, MySQL 등 다양한 DBMS에서 사용할 수 있�
 
 > 같은 제작자가 만든 [Netflix Sample Database](https://github.com/lerocha/netflixdb)도 있습니다. Netflix 참여 보고서 및 Netflix 글로벌 TOP 10 주간 목록 데이터를 기반으로 한 영화 및 TV 쇼 샘플 데이터베이스입니다.
 
----
 
 ## 데이터 모델
 
@@ -29,7 +26,7 @@ Chinook의 데이터 모델은 아티스트, 앨범, 미디어 트랙, 송장, �
 
 ![Chinook 데이터 모델](https://github.com/lerocha/chinook-database/assets/135025/cea7a05a-5c36-40cd-84c7-488307a123f4)
 
----
+
 
 ## 샘플 데이터
 
@@ -41,13 +38,13 @@ Chinook의 데이터 모델은 아티스트, 앨범, 미디어 트랙, 송장, �
 
 미디어 관련 데이터는 실제 iTunes Library 데이터를 사용하여 생성되었습니다. 본인의 iTunes Library를 사용하여 SQL 스크립트를 직접 생성하는 것도 가능합니다. 고객 및 직원 정보는 가상의 이름, Google 지도에서 확인 가능한 주소, 전화번호, 팩스, 이메일 등의 형식에 맞게 수동으로 생성되었습니다. 판매 정보는 4년간의 랜덤 데이터로 자동 생성됩니다.
 
----
+
 
 ## 이름의 유래
 
 이 샘플 데이터베이스의 이름은 Northwind 데이터베이스를 기반으로 지어졌습니다. Chinook은 북미 내륙 서부, 캐나다 대초원과 산악 지대가 만나는 곳에 부는 바람의 이름으로, 캐나다 앨버타 남부에서 가장 자주 붑니다. Northwind(북풍)를 대체하는 데이터베이스인 만큼, 또 다른 바람 이름인 Chinook을 선택한 것입니다.
 
----
+
 
 ## 개발 환경
 
