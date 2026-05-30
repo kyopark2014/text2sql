@@ -1,0 +1,40 @@
+{
+  "input": "Artist 테이블의 모든 데이터 조회",
+  "query": "SELECT * FROM Artist"
+}
+{
+  "input": "'AC/DC' 아티스트의 모든 앨범 조회",
+  "query": "SELECT * FROM Album WHERE ArtistId = (SELECT ArtistId FROM Artist WHERE Name = 'AC/DC')"
+}
+{
+  "input": "Rock 장르에 해당하는 모든 트랙 조회",
+  "query": "SELECT * FROM Track WHERE GenreId = (SELECT GenreId FROM Genre WHERE Name = 'Rock')"
+}
+{
+  "input": "Track 테이블의 전체 재생 시간 합계 조회",
+  "query": "SELECT SUM(Milliseconds) FROM Track"
+}
+{
+  "input": "캐나다 고객 전체 정보 조회",
+  "query": "SELECT * FROM Customer WHERE Country = 'Canada'"
+}
+{
+  "input": "앨범 ID가 5인 트랙의 총 개수 조회",
+  "query": "SELECT COUNT(*) FROM Track WHERE AlbumId = 5"
+}
+{
+  "input": "Invoice 테이블의 전체 레코드 수 조회",
+  "query": "SELECT COUNT(*) FROM Invoice"
+}
+{
+  "input": "재생 시간이 300,000밀리초 초과인 트랙 전체 정보 조회",
+  "query": "SELECT * FROM Track WHERE Milliseconds > 300000"
+}
+{
+  "input": "구매 총액 기준 상위 5명의 고객별 총 구매 금액 내림차순 조회",
+  "query": "SELECT CustomerId, SUM(Total) AS TotalPurchase FROM Invoice GROUP BY CustomerId ORDER BY TotalPurchase DESC LIMIT 5"
+}
+{
+  "input": "전체 직원 수 조회",
+  "query": "SELECT COUNT(*) FROM Employee"
+}

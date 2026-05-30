@@ -1,3 +1,4 @@
+import time
 import json
 import os
 
@@ -42,6 +43,8 @@ def load_schema_description():
     with open(file_path, 'r') as file:
         schema_description = json.load(file)
 
+    # print(json.dumps(schema_description, indent=4))
+    
     return schema_description
 
 def load_queries():
@@ -139,6 +142,7 @@ Translate the SQL query into one short Korean sentence that a real user might sa
 
 SQL: {sql}
 """
+
     prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
 
     chain = prompt | chat | StrOutputParser()
@@ -151,10 +155,34 @@ SQL: {sql}
     return response
 
 
+# pm = 'us-west-2'
+# opensearch_domain_endpoint = f"https://search-rag-multimodal-zeaonjcszpc7fpbivijtojze4m.us-west-2.es.amazonaws.com"
+# opensearch_user_id = 'admin'
+# opensearch_user_password = "Wifi1234!"
+# print(opensearch_domain_endpoint)
+
 def main():
     schema_description = load_schema_description()
     queries = load_queries()
 
+    # load sql query
+    # sql = queries[8].strip()
+    # print(f"loaded sql: {sql}")
+
+    # # extract schema
+    # used_schema = extract_schema(sql)
+    # print(f"used schema:\n{json.dumps(used_schema, ensure_ascii=False, indent=2)}")
+
+    # # extract descriptions
+    # extracted_description = extract_descriptions(
+    #     schema_description, used_schema['table'], used_schema['column']
+    # )
+    # print(f"extracted_description: {json.dumps(extracted_description, ensure_ascii=False, indent=2)}")
+
+    # natural_language = translate_query(sql, extracted_description)
+    # print(f"input: {natural_language}, sql: {sql}")
+
+    
     inputs = []
     for query in queries:
         sql = query.strip()
