@@ -283,7 +283,7 @@ if uploaded_file is not None and clear_button==False:
             file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name)
             logger.info(f"file_url: {file_url}")
 
-            body = multimodal.sync_data_source(file_url)  # sync uploaded files
+            body = utils.sync_data_source()  # sync uploaded files
 
             st.write(body)
             st.session_state.processed_files[file_key] = body
