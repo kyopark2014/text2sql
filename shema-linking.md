@@ -16,9 +16,9 @@ Text-to-SQL 분야에서 핵심적인 단계 중 하나로, 자연어 질문(Nat
 
 이를 해결하기 위해, 우리 DB에 맞춰 스키마 설명 문서를 정제하고, LLM에 필요한 컨텍스트를 선별하여 제공하는 작업이 필요합니다. 이 노트북에서는 스키마 준비 과정을 시뮬레이션 하기 위해, Chinook DB 설명 문서를 활용하겠습니다. 전체 작업 흐름은 아래와 같이 이어갈 예정입니다.
 
-### Schema Description 문서 활용
+### Step 1: Schema Description 문서 로드
 
-[chinook_schema.json](./labs/chinook_schema.json)와 같은 Schema를 설명한 문서를 활용할 수 있습니다. 아래는 정의된 schema의 일부분입니다.
+[chinook_schema.json](./labs/chinook_schema.json)와 같은 Schema를 설명한 문서를 활용할 수 있습니다. 아래는 정의된 schema의 일부분입니다. Schema description 문서에는 테이블의 이름과 테이블에 대한 기본 설명, 컬럼 이름과 컬럼에 대한 설명이 포함되어야 합니다. 
 
 ```java
 {
@@ -38,28 +38,138 @@ Text-to-SQL 분야에서 핵심적인 단계 중 하나로, 자연어 질문(Nat
 }
 ```
 
-Schema description 문서에는 테이블의 이름과 테이블에 대한 기본 설명, 컬럼 이름과 컬럼에 대한 설명이 포함되어야 합니다. 
-
-정리된 스키마 설명 문서가 없다면, 아주 기본적인 정보만 제공하고 LLM이 이를 증강하여 초기 설명문서 자체를 생성하도록 할 수도 있습니다. 
+정리된 스키마 설명 문서가 없다면, 먼저 기본적인 정보만 제공하고 LLM이 이를 증강하여 초기 설명문서 자체를 생성하도록 할 수도 있습니다. 
 
 
+### Step 2: SQL2Text 샘플 쿼리 변환 
 
-## Query Translator
+좋은 샘플 쿼리를 LLM에게 제공하는 것은 쿼리 작성 뿐만 아니라 schema linking에도 도움이 됩니다. 그러나, 대부분의 기업 환경에서 자주 사용되는 쿼리를 로그로 관리하므로, Text2SQL에서 사용하는 쿼리에 매칭되는 자연어 질문은 없습니다. 자주 사용하는 쿼리들을 자연어 질문으로 변환하는 SQL2Text 과정을 진행합니다.
 
-좋은 샘플 쿼리를 LLM에게 제공하는 것은 쿼리 작성 뿐만 아니라 Schema Linking에도 도움이 됩니다. 그러나, 대부분의 기업 환경에서 자주 사용되는 쿼리를 로그로 관리하고 있는 반면, (기존에 Text2SQL을 사용하지 않았기 때문에) 쿼리에 매칭되는 자연어 질문은 없습니다. 
-
-자주 사용하는 쿼리들을 자연어 질문으로 변환하는 SQL2Text 과정을 진행합니다.
-
-[chinook_sample_queries.sql](./labs/chinook_sample_queries.sql)에 아래와 같이 sample이 있습니다.
-
-쿼리를 해석하기 위해, 각 쿼리에 사용된 테이블/컬럼의 의미를 파악해야 합니다. 따라서, 각 쿼리에 사용된 테이블/컬럼 정보를 아래와 같이 추출합니다.
+쿼리를 해석하기 위해서는 각 쿼리에 사용된 테이블/컬럼의 의미를 파악해야 합니다. 따라서, 각 쿼리에 사용된 테이블/컬럼 정보를 아래와 같이 추출합니다.
 ```
 {
   "table": ["table1", "table2", ...],
   "column": ["col1", "col2", ...]
 }
 ```
-다음은 SQL 쿼리에 활용된 스키마 목록을 추출하는 LLM 요청 구문입니다.
+
+[chinook_sample_queries.sql](./labs/chinook_sample_queries.sql)와 같은 sample이 있다고 가정합니다. 여기서는 설명을 위해 "SELECT CustomerId, SUM(Total) AS TotalPurchase FROM Invoice GROUP BY CustomerId ORDER BY TotalPurchase DESC LIMIT 5"에 대한 변환을 해보겠습니다. 아래의 extract_schema와 같이 query 문을 주고 table, column에 대한 정보를 추출합니다. 
+
+```python
+def extract_schema(query):
+    chat = ChatBedrock(model_id=modelId, region_name='us-west-2', model_kwargs=model_kwargs)
+
+    system = """ 
+You are an expert in extracting table names and column names from SQL queries. 
+From the provided SQL query, extract all table names and column names used for SELECT, WHERE, and JOIN clauses, excluding asterisks ("*"). 
+Ensure that the response is in a valid JSON format that can be used directly with json.load(). 
+Skip the preamble and only provide the answer in a JSON document:
+
+{{
+  "table": ["table1", "table2", ...],
+  "column": ["col1", "col2", ...]
+}}
+
+<example>
+SQL:
+SELECT * from LOGIS_ADMIN.IAWD_TB_DCBSCD_BASISLC_M 
+where basis_lclsf_cd_nm like '%예약구분%'
+LIMIT 200;
+
+{{
+  "table": ["IAWD_TB_DCBSCD_BASISLC_M"],
+  "column": ["basis_lclsf_cd_nm"]
+}}
+</example>
+"""
+    human = "SQL: {sql}"
+
+    prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
+
+    chain = prompt | chat | StrOutputParser()
+
+    response = chain.invoke({"sql": query})
+
+    used_schema = parse_json_response(response)
+    print(used_schema)
+
+    return used_schema
+```
+
+이때 추출된 table, column에 대한 결과는 아래와 같습니다.
+
+```java
+{
+  "table": ["Invoice"],
+  "column": ["CustomerId", "Total", "TotalPurchase"]
+}
+```
+
+[chinook_schema.json](./labs/chinook_schema.json)에서 table과 column에 대한 description을 추출합니다.
+
+```python
+schema_description = load_schema_description()
+extracted_description = extract_descriptions(
+    schema_description, used_schema['table'], used_schema['column']
+)
+```
+
+이때의 결과는 아래와 같습니다.
+
+```python
+{
+  "table": {
+    "Invoice": "Records details of transactions, linked to customers."
+  },
+  "column": {
+    "CustomerId": "Foreign key that references the customer associated with this invoice.",
+    "Total": "Total amount of the invoice."
+  }
+}
+```
+
+아래와 같이 query문의 의미를 하나의 문장으로 표현합니다.
+
+```python
+def translate_query(query, description):
+    chat = ChatBedrock(model_id=modelId, region_name='us-west-2', model_kwargs=model_kwargs)
+
+    system = """
+You are an SQL expert who understands the intent behind a given SQL query.
+Translate the SQL query into one short Korean sentence that a real user might say.
+
+- Output exactly one sentence (under 80 Korean characters when possible).
+- Include all filters, joins, aggregations, ordering, and limits from the SQL.
+- Do not reference the <description> section; do not use a question form.
+- Use a concise, straightforward tone without a verb ending (e.g. "~조회", "~확인").
+- Do not add headings, bullet lists, markdown, or business-purpose explanations.
+- Return only the sentence, with no preamble or labels.
+"""
+    human = """
+<description>
+{description}
+</description>
+
+SQL: {sql}
+"""
+
+    prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
+
+    chain = prompt | chat | StrOutputParser()
+
+    response = chain.invoke({
+        "sql": query,
+        "description": json.dumps(description, ensure_ascii=False, indent=2),
+    })
+
+    return response
+```
+
+이와같이 "SELECT CustomerId, SUM(Total) AS TotalPurchase FROM Invoice GROUP BY CustomerId ORDER BY TotalPurchase DESC LIMIT 5"로 주어진 query문의 의미가 "구매 총액 기준 상위 5명의 고객별 총 구매액 내림차순 조회"로 변환됩니다.
+
+```
+{"input": "앨범 ID가 5인 트랙 수 확인 요청. 특정 앨범에 포함된 전체 트랙 수를 파악하여 앨범 구성 현황을 점검하거나 해당 앨범의 총 재생시간을 산출하는 데 활용될 수 있습니다.", "query": "SELECT COUNT(*) FROM Track WHERE AlbumId = 5"}
+{"input": "전체 송장 건수 확인. 회사의 총 거래 규모와 고객 수를 파악하기 위한 기초 데이터로 활용 가능합니다. 매출 추이 분석, 영업 실적 평가, 재고 관리 계획 수립 등 다양한 비즈니스 의사결정에 필요한 핵심 지표입니다.", "query": "SELECT COUNT(*) FROM Invoice"}
 
 
 
