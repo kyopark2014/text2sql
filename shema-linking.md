@@ -167,9 +167,49 @@ SQL: {sql}
 
 이와같이 "SELECT CustomerId, SUM(Total) AS TotalPurchase FROM Invoice GROUP BY CustomerId ORDER BY TotalPurchase DESC LIMIT 5"로 주어진 query문의 의미가 "구매 총액 기준 상위 5명의 고객별 총 구매액 내림차순 조회"로 변환됩니다.
 
-```
-{"input": "앨범 ID가 5인 트랙 수 확인 요청. 특정 앨범에 포함된 전체 트랙 수를 파악하여 앨범 구성 현황을 점검하거나 해당 앨범의 총 재생시간을 산출하는 데 활용될 수 있습니다.", "query": "SELECT COUNT(*) FROM Track WHERE AlbumId = 5"}
-{"input": "전체 송장 건수 확인. 회사의 총 거래 규모와 고객 수를 파악하기 위한 기초 데이터로 활용 가능합니다. 매출 추이 분석, 영업 실적 평가, 재고 관리 계획 수립 등 다양한 비즈니스 의사결정에 필요한 핵심 지표입니다.", "query": "SELECT COUNT(*) FROM Invoice"}
+나머지 항목에 대해서도 아래와 같이 수행합니다.
 
+```
+{
+  "input": "Artist 테이블의 모든 데이터 조회",
+  "query": "SELECT * FROM Artist"
+}
+{
+  "input": "'AC/DC' 아티스트의 모든 앨범 조회",
+  "query": "SELECT * FROM Album WHERE ArtistId = (SELECT ArtistId FROM Artist WHERE Name = 'AC/DC')"
+}
+{
+  "input": "Rock 장르에 해당하는 모든 트랙 조회",
+  "query": "SELECT * FROM Track WHERE GenreId = (SELECT GenreId FROM Genre WHERE Name = 'Rock')"
+}
+{
+  "input": "Track 테이블의 전체 재생 시간 합계 조회",
+  "query": "SELECT SUM(Milliseconds) FROM Track"
+}
+{
+  "input": "캐나다 고객 전체 정보 조회",
+  "query": "SELECT * FROM Customer WHERE Country = 'Canada'"
+}
+{
+  "input": "앨범 ID가 5인 트랙의 총 개수 조회",
+  "query": "SELECT COUNT(*) FROM Track WHERE AlbumId = 5"
+}
+{
+  "input": "Invoice 테이블의 전체 레코드 수 조회",
+  "query": "SELECT COUNT(*) FROM Invoice"
+}
+{
+  "input": "재생 시간이 300,000밀리초 초과인 트랙 전체 정보 조회",
+  "query": "SELECT * FROM Track WHERE Milliseconds > 300000"
+}
+{
+  "input": "구매 총액 기준 상위 5명의 고객별 총 구매 금액 내림차순 조회",
+  "query": "SELECT CustomerId, SUM(Total) AS TotalPurchase FROM Invoice GROUP BY CustomerId ORDER BY TotalPurchase DESC LIMIT 5"
+}
+{
+  "input": "전체 직원 수 조회",
+  "query": "SELECT COUNT(*) FROM Employee"
+}
+```
 
 
