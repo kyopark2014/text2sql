@@ -165,7 +165,7 @@ SQL: {sql}
     return response
 ```
 
-이와같이 "SELECT CustomerId, SUM(Total) AS TotalPurchase FROM Invoice GROUP BY CustomerId ORDER BY TotalPurchase DESC LIMIT 5"로 주어진 query문의 의미가 "구매 총액 기준 상위 5명의 고객별 총 구매액 내림차순 조회"로 변환됩니다.
+이와같이 "SELECT CustomerId, SUM(Total) AS TotalPurchase FROM Invoice GROUP BY CustomerId ORDER BY TotalPurchase DESC LIMIT 5"로 주어진 query문의 의미가 "구매 총액 기준 상위 5명의 고객별 총 구매 금액 내림차순 조회"로 변환됩니다.
 
 나머지 항목에 대해서도 아래와 같이 수행합니다.
 
