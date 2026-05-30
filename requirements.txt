@@ -1,0 +1,4 @@
+langchain-aws
+langchain-community
+opensearch-py
+PyYAML
