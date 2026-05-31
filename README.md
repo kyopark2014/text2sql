@@ -1,16 +1,14 @@
 # MCP로 Tex2SQL 활용하기
 
-RDB와 같이 데이터베이스를 조회하기 위한 Text2SQL을 구현하는 방법에 대해 설명합니다. 
-
-전체적인 architecture는 아래와 같습니다. Local PC에 설치된 streamlit을 이용해 미리 생성한 example query(json 파일)을 업로드하면 Knowledge base가 sync를 통해 Amazon S3 Vector에 관련된 schema를 문서로 저장합니다. 사용자가 질문을 하면 Knowledge Base를 조회하는 kb-retriever 도구를 이용해 질문과 관련된 example queries를 가져옵니다. 이렇게 얻어진 자연어로 된 SQL 예제와 schema를 가지고 text2sql tool은 database에서 필요한 정보를 조회합니다. 생성된 SQL에 대한 근거문서는 CloudFront - S3 형태로 구성하여 참조할 수 있습니다. SQL은 문서의 길이가 다른 RAG 문서에 비해 작아서 Amazon S3 vector를 이용해도 충분한 성능을 확보할 수 있으므로 Knowledge Base의 지식 저장소로 Amazon S3 vector를 이용하고 있습니다.
+여기에서는 AI 애플리에키션이 데이터베이스를 조회하기 위해 사용하는 Text2SQL을 구현하는 방법에 대해 설명합니다. 전체적인 architecture는 아래와 같습니다. Local PC에 설치된 streamlit을 이용해 미리 생성한 example query(json 파일)을 업로드하면, Knowledge Base가 sync를 통해, Amazon S3 Vector에 embedding된 vector가 저장됩니다. 이후, 사용자가 streamlit의 채팅창에서 질문을 하면 text2sql tool은 먼저 Knowledge Base를 조회하여 example query들을 가져온 후에 데이터베이스의 schema를 참조하여 SQL 문을 생성한 후에 database를 조회합니다. 생성된 SQL에 대한 근거문서인 example query는 CloudFront - S3 형태로 확인할 수 있습니다. 또한 example query문은 chunk 길이가 다른 RAG 문서에 비해 작으므로, 비용면에서 우수한 Amazon S3 vector를 이용해 Knowledge Base의 지식 저장소로 Amazon S3 Vector를 이용합니다.
 
 <img width="800" alt="image" src="https://github.com/user-attachments/assets/06d71485-f1bb-45ad-974c-14eb438c6f23" />
 
-Text2SQL을 위해서는 [chinook_schema.json](./labs/chinook_schema.json)와 같은 schema 정보가 필요합니다. 이는 필요시 LLM을 이용해서 생성할 수도 있지만, 원할한 진행을 위해 이미 database에 대한 schema 문서가 있다고 가정합니다. Text2SQL의 정확도를 높이기 위해서는 기존에 활용하는 example query가 필요합니다. 이를 활용하기 위해서는 질문에 따라 가장 가까운 sample query 조회가 필요하므로 여기에서는 RAG를 이용해 관련된 sample query들을 수집하여 활용합니다.
+Text2SQL을 위해서는 [chinook_schema.json](./labs/chinook_schema.json)와 같은 schema 정보가 필요합니다. 이는 데이터베이스 관리자가 기존에 관리하던 schema 정보를 활용하여 작성하여야 하며, 만약 LLM을 이용해 신규로 작성한다면 담당자 확인을 통해 정확한 정보가 반영되도록 하여야 합니다. 이후 Text2SQL의 정확도를 높이기 위해 example query문을 생성합니다. 이 example query는 기존에 활용하거나 성공한 SQL문과 용도를 json형태로 정리한것으로서, schema 문서에 있는 table, column정보와 함께 SQL문 생성의 정확도에 중요한 역할을 합니다. 이와같이 agent는 사용자의 질문에 답하기 위해 데이터베이스 조회가 필요하다고 생각이 되면 text2sql 도구를 통해 RAG로 부터 example query문을 검색하고 schema 정보를 함께 활용하여, 적절한 SQL문을 생성하여 데이터베이스를 조회하게 됩니다. 
 
 ## Schema Linking
 
-Text-to-SQL 분야에서 핵심적인 단계 중 하나로, 자연어 질문(Natural Language Question)에 등장하는 단어나 표현을 데이터베이스의 스키마 요소(테이블명, 컬럼명, 값 등)와 연결(매핑)하는 과정입니다. 자연어에는 모호한 표현이 많기 때문에, 어떤 테이블/컬럼을 가리키는지 정확히 파악해야 올바른 SQL을 생성할 수 있습니다. Schema Linking이 잘못되면 엉뚱한 테이블이나 컬럼을 참조하는 SQL이 만들어져 결과가 틀리게 됩니다. 상세 내용은 [Lab. 1-1 Schema Preparation-1](https://github.com/aws-samples/aws-ai-ml-workshop-kr/blob/master/genai/aws-gen-ai-kr/20_applications/12_advanced_agentic_text2sql/lab1_text2sql_schema_preparation/1.sample_queries.ipynb)을 참조하였습니다.
+Text-to-SQL 분야에서 핵심적인 단계 중 하나로, 자연어 질문(Natural Language Question)에 등장하는 단어나 표현을 데이터베이스의 스키마 요소(테이블명, 컬럼명, 값 등)와 연결(매핑)하는 과정입니다. 자연어에는 모호한 표현이 많기 때문에, 어떤 테이블/컬럼을 가리키는지 정확히 파악해야 올바른 SQL을 생성할 수 있습니다. Schema Linking이 잘못되면 엉뚱한 테이블이나 컬럼을 참조하는 SQL이 만들어져 결과가 틀리게 됩니다. 여기에서는 [Lab. 1-1 Schema Preparation-1](https://github.com/aws-samples/aws-ai-ml-workshop-kr/blob/master/genai/aws-gen-ai-kr/20_applications/12_advanced_agentic_text2sql/lab1_text2sql_schema_preparation/1.sample_queries.ipynb)을 참조하였습니다.
 
 Schema linking은 아래와 같은 방법을 통해 구현합니다.
 
@@ -18,11 +16,11 @@ Schema linking은 아래와 같은 방법을 통해 구현합니다.
 - 임베딩 유사도 - 단어의 의미적 유사도를 벡터로 비교
 - LLM 활용 - GPT 등 대형 언어 모델이 문맥을 파악하여 자동으로 연결
 
-복잡한 데이터베이스에서 Text2SQL의 가장 어려운 작업은 쿼리 생성에 필요한 스키마를 선별하는 과정, 즉 Schema Linking 입니다. 현실의 기업 환경에서는 테이블/컬럼 이름이 의미를 축약하고 있어서 LLM이 이를 파악하기 힘들거나, 테이블/컬럼이 너무 많아서 모든 목록을 프롬프트에 담아 전달하는 것이 불가능한 경우가 많습니다. 이를 해결하기 위해, 우리 DB에 맞춰 스키마 설명 문서를 정제하고, LLM에 필요한 컨텍스트를 선별하여 제공하는 작업이 필요합니다. 이 노트북에서는 스키마 준비 과정을 시뮬레이션 하기 위해, Chinook DB 설명 문서를 활용하겠습니다. 전체 작업 흐름은 아래와 같이 이어갈 예정입니다.
+복잡한 데이터베이스에서 Text2SQL을 할때에 가장 어려운 작업은 쿼리 생성에 필요한 스키마를 선별하는 과정, 즉 Schema Linking 입니다. 대부분의 기업 환경에서는 table/column 이름이 의미를 축약하고 있어서 LLM이 이를 파악하기 힘들거나, table/colmn이 너무 많아서 모든 목록을 프롬프트에 담아 전달하는 것이 불가능한 경우가 많습니다. 이를 해결하기 위해, 데이터베이스에 맞춰 스키마 설명 문서를 정제하고, LLM에 필요한 컨텍스트를 선별하여 제공하는 작업이 필요합니다. 
 
-### Step 1: Schema Description 문서 로드
+### Step 1: Schema Description 문서 
 
-[chinook_schema.json](./labs/chinook_schema.json)와 같은 Schema를 설명한 문서를 활용할 수 있습니다. 아래는 정의된 schema의 일부분입니다. Schema description 문서에는 테이블의 이름과 테이블에 대한 기본 설명, 컬럼 이름과 컬럼에 대한 설명이 포함되어야 합니다. 
+[chinook_schema.json](./labs/chinook_schema.json)와 같은 schema를 설명한 문서를 읽어옵니다. 아래는 정의된 schema의 일부분입니다. Schema description 문서에는 테이블의 이름과 테이블에 대한 기본 설명, 컬럼 이름과 컬럼에 대한 설명이 포함되어야 합니다. 
 
 ```java
 {
@@ -42,14 +40,14 @@ Schema linking은 아래와 같은 방법을 통해 구현합니다.
 }
 ```
 
-정리된 스키마 설명 문서가 없다면, 먼저 기본적인 정보만 제공하고 LLM이 이를 증강하여 초기 설명문서 자체를 생성하도록 할 수도 있습니다. 
+정리된 schema 설명 문서가 없다면, LLM을 이용해 초안을 작성한 후에 담당자를 통해 수정하는 절차를 진행합니다.
 
 
 ### Step 2: SQL2Text 샘플 쿼리 변환 
 
-좋은 샘플 쿼리를 LLM에게 제공하는 것은 쿼리 작성 뿐만 아니라 schema linking에도 도움이 됩니다. 그러나, 대부분의 기업 환경에서 자주 사용되는 쿼리를 로그로 관리하므로, Text2SQL에서 사용하는 쿼리에 매칭되는 자연어 질문은 없습니다. 자주 사용하는 쿼리들을 자연어 질문으로 변환하는 SQL2Text 과정을 진행합니다.
+LLM이 SQL문을 잘 이해할수 있도록 schema linking을 수행합니다. 이를 위해 여기에서는 기존 성공한 query문에 대해 자연어 설명을 생성합니다. 이후 자주 사용하는 query문들은 정기적으로 자연어 질문으로 변환하여 추가합니다. 
 
-쿼리를 해석하기 위해서는 각 쿼리에 사용된 테이블/컬럼의 의미를 파악해야 합니다. 따라서, 각 쿼리에 사용된 테이블/컬럼 정보를 아래와 같이 추출합니다.
+쿼리를 해석하기 위해서 각 쿼리에 사용된 테이블/컬럼의 의미를 파악해야 합니다. 따라서, [chinook_sample_queries.sql](./labs/chinook_sample_queries.sql)와 같은 schema 문서를 활용하여, 각 query문에 사용된 테이블/컬럼 정보를 아래와 같이 추출합니다.
 ```
 {
   "table": ["table1", "table2", ...],
@@ -57,7 +55,7 @@ Schema linking은 아래와 같은 방법을 통해 구현합니다.
 }
 ```
 
-[chinook_sample_queries.sql](./labs/chinook_sample_queries.sql)와 같은 sample이 있다고 가정합니다. 여기서는 설명을 위해 "SELECT CustomerId, SUM(Total) AS TotalPurchase FROM Invoice GROUP BY CustomerId ORDER BY TotalPurchase DESC LIMIT 5"에 대한 변환을 해보겠습니다. 아래의 extract_schema와 같이 query 문을 주고 table, column에 대한 정보를 추출합니다. 
+"SELECT CustomerId, SUM(Total) AS TotalPurchase FROM Invoice GROUP BY CustomerId ORDER BY TotalPurchase DESC LIMIT 5"와 같은 query문이 있다면, 아래와 같이 table/column에 대한 정보를 추출합니다. 
 
 ```python
 def extract_schema(query):
@@ -100,7 +98,7 @@ LIMIT 200;
     return used_schema
 ```
 
-이때 추출된 table, column에 대한 결과는 아래와 같습니다.
+이때 추출된 table, column 정보는 아래와 같습니다.
 
 ```java
 {
@@ -109,7 +107,7 @@ LIMIT 200;
 }
 ```
 
-[chinook_schema.json](./labs/chinook_schema.json)에서 table과 column에 대한 description을 추출합니다.
+이제 [chinook_schema.json](./labs/chinook_schema.json)에서 table과 column에 대한 description을 추출합니다.
 
 ```python
 schema_description = load_schema_description()
@@ -132,7 +130,7 @@ extracted_description = extract_descriptions(
 }
 ```
 
-아래와 같이 query문의 의미를 하나의 문장으로 표현합니다.
+이후, 아래와 같이 query문 의미를 하나의 문장으로 정리합니다.
 
 ```python
 def translate_query(query, description):
@@ -169,9 +167,9 @@ SQL: {sql}
     return response
 ```
 
-이와같이 "SELECT CustomerId, SUM(Total) AS TotalPurchase FROM Invoice GROUP BY CustomerId ORDER BY TotalPurchase DESC LIMIT 5"로 주어진 query문의 의미가 "구매 총액 기준 상위 5명의 고객별 총 구매 금액 내림차순 조회"로 변환됩니다.
+"SELECT CustomerId, SUM(Total) AS TotalPurchase FROM Invoice GROUP BY CustomerId ORDER BY TotalPurchase DESC LIMIT 5"로 주어진 query문의 의미는 "구매 총액 기준 상위 5명의 고객별 총 구매 금액 내림차순 조회"로 변환되었습니다.
 
-나머지 항목에 대해서도 아래와 같이 수행합니다.
+[chinook_sample_queries.sql](./labs/chinook_sample_queries.sql)에 있는 나머지 항목에 대해서도 동일한 작업을 수횅하면 아래와 같이 schema linkin의 결과를 얻을 수 있습니다.
 
 ```
 {
@@ -216,9 +214,11 @@ SQL: {sql}
 }
 ```
 
+Streamlit에서 파일업로드 버튼을 선택한 후에 [example_queries_temp.jsonl](./labs/example_queries_temp.jsonl)를 업로드하면 Knowledge Base를 통해 embedding후 vector로 저장됩니다.
+
 ## Text2SQL MCP
 
-[mcp_server_text2sql.py](./application/mcp_server_text2sql.py)와 같이 MCP 서버를 정의합니다. 여기에서는 아래와 같이 질문으로부터 SQL을 생성하는 tool과 database에 sql 문을 수행하는 tool로 구성됩니다.
+Text2SQL을 편리하게 수행하기 위해 [mcp_server_text2sql.py](./application/mcp_server_text2sql.py)와 같이 MCP로 동작하는 tool을 생성합니다. 이 tool은 아래와 같이 질문에 필요한 정보를 가져오는 SQL문을 생성하고, 데이터베이스를 조회합니다.
 
 ```python
 @mcp.tool()
@@ -240,7 +240,7 @@ def execute_query(sql: str) -> str:
     return mcp_text2sql.execute_query(sql)
 ```
 
-[mcp_text2sql.py](./application/mcp_text2sql.py)에서 generate_query은 RAG로부터 얻어온 sample query들과 table 정보를 이용해 SQL 문을 생성합니다.
+[mcp_text2sql.py](./application/mcp_text2sql.py)의 generate_query은 RAG로부터 얻어온 sample query들과 table 정보를 이용해 SQL 문을 생성합니다.
 
 ```python
 def generate_query(question: str) -> str:
@@ -299,10 +299,9 @@ def execute_query(query: str) -> str:
 ```
 
 
+## Chinook
 
-## Chinook Sample
-
-여기에서는 [Chinook](https://github.com/lerocha/chinook-database/blob/master/README.md)을 활용합니다. 상세한 내용은 [chinook-database.md](./chinook-database.md)을 참조합니다.
+여기에서는 테스트를 위해 [Chinook](https://github.com/lerocha/chinook-database/blob/master/README.md)을 활용합니다. 상세한 내용은 [chinook-database.md](./chinook-database.md)을 참조합니다.
 
 <img width="700" alt="chinook_table" src="./contents/chinook_table.png" />
 
@@ -422,22 +421,9 @@ Infrastructure Deployment Completed Successfully!
 
 ### 4단계: 샘플 쿼리 적재 및 Knowledge Base 동기화
 
-Text2SQL은 질문과 유사한 SQL 샘플을 Knowledge Base에서 검색합니다([`mcp_retrieve.py`](./application/mcp_retrieve.py)). 샘플 쿼리는 S3 버킷의 `docs/` prefix 아래에 두고 동기화합니다.
+Stremlit에서 파일업로드 버튼을 선택하여 [example_queries_temp.jsonl](./labds/example_queries_temp.jsonl)을 업로드gkqslek. 이후 사용자가 질문하면, Text2SQL 도구를 이용하여 유사한 SQL 샘플을 Knowledge Base에서 검색합니다([`mcp_retrieve.py`](./application/mcp_retrieve.py)). 샘플 쿼리는 S3 버킷의 `docs/` prefix 아래에 두고 동기화합니다.
 
-**방법 A — 저장소에 포함된 샘플 사용**
-
-```bash
-aws s3 cp database/example_queries.jsonl \
-  s3://storage-for-rag-project-<account_id>-us-west-2/docs/
-```
-
-**방법 B — SQL2Text로 새 샘플 생성**
-
-[`labs/sample_queries.py`](./labs/sample_queries.py)로 `labs/chinook_sample_queries.sql`을 자연어+SQL JSONL로 변환한 뒤, 위와 같이 `docs/`에 업로드합니다.
-
-업로드 후 Streamlit **RAG** 모드에서 PDF를 업로드하면 자동으로 sync가 실행됩니다. JSONL만 올린 경우에는 AWS 콘솔 → **Bedrock → Knowledge Bases → 데이터 소스 → Sync** 를 수동 실행하거나, 앱을 한 번 실행해 `utils.sync_data_source()`가 호출되도록 합니다. 진행 상황은 **Sync history**에서 확인할 수 있습니다.
-
-### 로컬에서 애플리케이션 실행
+### 5단계: 로컬에서 애플리케이션 실행
 
 ```bash
 streamlit run application/app.py
