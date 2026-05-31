@@ -76,6 +76,7 @@ with st.sidebar:
     # mcp selection    
     mcp_options = [
         "RAG", 
+        "text2sql",
         "aws_documentation", 
         "web_fetch",
         "text_extraction",
@@ -107,7 +108,7 @@ with st.sidebar:
 
         # Change radio to checkbox        
         mcp_selections = {}
-        default_selections = ["RAG"]
+        default_selections = ["text2sql"]
         
         with st.expander("MCP 옵션 선택", expanded=True):
             for option in mcp_options:

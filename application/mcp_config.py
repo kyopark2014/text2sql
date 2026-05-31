@@ -78,6 +78,16 @@ def load_config(mcp_type):
             }
         }
     
+    elif mcp_type == "text2sql":
+        return {
+            "mcpServers": {
+                "text2sql": {
+                    "command": "python",
+                    "args": [f"{workingDir}/mcp_server_text2sql.py"]
+                }
+            }
+        }
+    
     elif mcp_type == "aws_documentation":
         return {
             "mcpServers": {
