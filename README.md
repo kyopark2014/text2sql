@@ -2,7 +2,7 @@
 
 여기에서는 AI 애플리에키션이 데이터베이스를 조회하기 위해 사용하는 Text2SQL을 구현하는 방법에 대해 설명합니다. 전체적인 architecture는 아래와 같습니다. Local PC에 설치된 streamlit을 이용해 미리 생성한 example query(json 파일)을 업로드하면, Knowledge Base가 sync를 통해, Amazon S3 Vector에 embedding된 vector가 저장됩니다. 이후, 사용자가 streamlit의 채팅창에서 질문을 하면 text2sql tool은 먼저 Knowledge Base를 조회하여 example query들을 가져온 후에 데이터베이스의 schema를 참조하여 SQL 문을 생성한 후에 database를 조회합니다. 생성된 SQL에 대한 근거문서인 example query는 CloudFront - S3 형태로 확인할 수 있습니다. 또한 example query문은 chunk 길이가 다른 RAG 문서에 비해 작으므로, 비용면에서 우수한 Amazon S3 vector를 이용해 Knowledge Base의 지식 저장소로 Amazon S3 Vector를 이용합니다.
 
-<img width="800" alt="image" src="https://github.com/user-attachments/assets/06d71485-f1bb-45ad-974c-14eb438c6f23" />
+<img width="800" alt="image" src="https://github.com/user-attachments/assets/4e8bd15c-9885-4730-8370-616316e1a386" />
 
 Text2SQL을 위해서는 [chinook_schema.json](./labs/chinook_schema.json)와 같은 schema 정보가 필요합니다. 이는 데이터베이스 관리자가 기존에 관리하던 schema 정보를 활용하여 작성하여야 하며, 만약 LLM을 이용해 신규로 작성한다면 담당자 확인을 통해 정확한 정보가 반영되도록 하여야 합니다. 이후 Text2SQL의 정확도를 높이기 위해 example query문을 생성합니다. 이 example query는 기존에 활용하거나 성공한 SQL문과 용도를 json형태로 정리한것으로서, schema 문서에 있는 table, column정보와 함께 SQL문 생성의 정확도에 중요한 역할을 합니다. 이와같이 agent는 사용자의 질문에 답하기 위해 데이터베이스 조회가 필요하다고 생각이 되면 text2sql 도구를 통해 RAG로 부터 example query문을 검색하고 schema 정보를 함께 활용하여, 적절한 SQL문을 생성하여 데이터베이스를 조회하게 됩니다. 
 
