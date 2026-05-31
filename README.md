@@ -4,7 +4,7 @@ RDB와 같이 데이터베이스를 조회하기 위한 Text2SQL을 구현하는
 
 전체적인 architecture는 아래와 같습니다. Local PC에 설치된 streamlit을 이용해 미리 생성한 example query(json 파일)을 업로드하면 Knowledge base가 sync를 통해 Amazon S3 Vector에 관련된 schema를 문서로 저장합니다. 사용자가 질문을 하면 Knowledge Base를 조회하는 kb-retriever 도구를 이용해 질문과 관련된 example queries를 가져옵니다. 이렇게 얻어진 자연어로 된 SQL 예제와 schema를 가지고 text2sql tool은 database에서 필요한 정보를 조회합니다. 생성된 SQL에 대한 근거문서는 CloudFront - S3 형태로 구성하여 참조할 수 있습니다. SQL은 문서의 길이가 다른 RAG 문서에 비해 작아서 Amazon S3 vector를 이용해도 충분한 성능을 확보할 수 있으므로 Knowledge Base의 지식 저장소로 Amazon S3 vector를 이용하고 있습니다.
 
-<img width="1094" height="731" alt="image" src="https://github.com/user-attachments/assets/06d71485-f1bb-45ad-974c-14eb438c6f23" />
+<img width="800" alt="image" src="https://github.com/user-attachments/assets/06d71485-f1bb-45ad-974c-14eb438c6f23" />
 
 ## Schema Linking
 
