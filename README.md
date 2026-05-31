@@ -1,4 +1,4 @@
-# Tex2SQL 구현하기
+# MCP로 Tex2SQL 활용하기
 
 RDB와 같이 데이터베이스를 조회하기 위한 Text2SQL을 구현하는 방법에 대해 설명합니다.
 
@@ -299,6 +299,97 @@ def execute_query(query: str) -> str:
 여기에서는 [Chinook](https://github.com/lerocha/chinook-database/blob/master/README.md)을 활용합니다. 상세한 내용은 [chinook-database.md](./chinook-database.md)을 참조합니다.
 
 <img width="700" alt="chinook_table" src="./contents/chinook_table.png" />
+
+
+## 설치 및 실행
+
+여기서는 [installer.py](./installer.py) 하나로 RAG 시스템 구동에 필요한 AWS 인프라(S3, OpenSearch Serverless, Bedrock Knowledge Base, VPC, ALB, CloudFront, EC2)를 일괄 배포하고, EC2 인스턴스의 User Data 스크립트가 Streamlit 애플리케이션까지 자동으로 기동하도록 설계되어 있습니다.
+
+### 사전 준비 (Prerequisites)
+
+| 항목 | 요구사항 |
+|------|----------|
+| AWS 계정 | 관리자 권한 또는 인프라 생성 권한 (IAM, S3, EC2, VPC, ALB, CloudFront, OpenSearch Serverless, Bedrock, Secrets Manager) |
+| AWS 리전 | `us-west-2` (기본값, BDA / Nova / Claude 모델 사용 가능 리전) |
+| Bedrock 모델 액세스 | AWS 콘솔 → Bedrock → **Model access** 에서 사용할 모델(Nova, Claude, Titan Embed v2 등) 활성화 필요 |
+| Python | 3.10 이상 |
+| AWS CLI | 자격증명 설정 완료 (`aws configure` 또는 SSO) |
+
+### 1단계: 저장소 클론 및 의존성 설치
+
+```bash
+git clone https://github.com/kyopark2014/rag-automation && cd rag-automation
+
+pip install -r requirements.txt
+```
+
+### 2단계: AWS 자격증명 설정
+
+`installer.py`, `uninstaller.py`, `add_content.py` 모두 boto3 기본 자격증명 체인을 사용합니다. 다음 중 하나를 구성하세요.
+
+```bash
+aws configure                      # Access Key 방식
+
+aws sso login --profile <profile>  # SSO 사용 시
+export AWS_PROFILE=<profile>
+```
+
+기본 리전 및 프로젝트명은 `installer.py` 상단에서 수정할 수 있습니다.
+
+```python
+project_name = "rag-automation"   # 최소 3자
+region = "us-west-2"
+```
+
+### 3단계: AWS 인프라 배포
+
+루트 디렉터리에서 `installer.py`를 실행하면 약 15~25분에 걸쳐 모든 리소스가 생성됩니다.
+
+```bash
+python installer.py
+```
+
+배포가 완료되면 콘솔에 다음 정보가 출력되고 `application/config.json`이 자동으로 채워집니다.
+
+```
+================================================================
+Infrastructure Deployment Completed Successfully!
+================================================================
+  S3 Bucket:           storage-for-rag-project-<account_id>-us-west-2
+  Knowledge Base ID:   XXXXXXXXXX
+  OpenSearch Endpoint: https://xxxxxxxx.us-west-2.aoss.amazonaws.com
+  ALB DNS:             http://alb-for-rag-automation-xxxx.us-west-2.elb.amazonaws.com/
+  CloudFront URL:      https://xxxxxxxxx.cloudfront.net
+================================================================
+```
+
+> CloudFront 배포는 완전히 활성화되기까지 15~20분이 추가로 소요될 수 있습니다. 자세한 옵션(`--run-setup`, `--verify-deployment`)과 생성 리소스 명세는 [`installer.md`](installer.md) 참조.
+
+### 4단계: 문서 적재 및 Knowledge Base 동기화
+
+배포가 끝나면 streamlit에서 파일을 업로드하고 자동으로 Knowledge Base에서 sync가 수행됩니다. 진행 상황은 AWS 콘솔 → **Bedrock → Knowledge Bases → 데이터 소스 → Sync history** 에서 확인할 수 있습니다.
+
+### 로컬에서 애플리케이션 실행
+
+로컬에서 아래처럼 UI를 띄워 테스트할 수도 있습니다. 
+
+```bash
+streamlit run application/app.py 
+```
+
+이후 자동으로 브라우저에서 `http://localhost:8501` 로 접속됩니다. Knowledge Base / S3 / Bedrock 호출은 모두 `config.json`에 기록된 리전·KB ID·역할을 통해 이루어집니다.
+
+### 리소스 정리 (Uninstall)
+
+테스트가 끝났다면 `uninstaller.py`로 `installer.py`가 만든 모든 리소스를 안전하게 삭제합니다.
+
+```bash
+python uninstaller.py            # 확인 프롬프트 표시
+python uninstaller.py --yes      # 프롬프트 없이 즉시 삭제
+```
+
+CloudFront 비활성화에 시간이 걸려 일부 리소스가 남을 수 있으며, 이 경우 안내 메시지에 따라 잠시 후 다시 실행하면 됩니다.
+
 
 ## 실행결과
 
