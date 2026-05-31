@@ -213,6 +213,15 @@ SQL: {sql}
 ## Text2SQL MCP
 
 
+
+## Chinook Sample
+
+여기에서는 [Chinook](https://github.com/lerocha/chinook-database/blob/master/README.md)을 활용합니다. 상세한 내용은 [chinook-database.md](./chinook-database.md)을 참조합니다.
+
+<img width="700" alt="chinook_table" src="./contents/chinook_table.png" />
+
+
+
 ## Reference
 
 [Amazon Bedrock과 LangChain을 이용한 "비즈니스 데이터 분석을 위한 자연어 기반 BI"](https://github.com/jesamkim/aws-genai-for-retail/blob/main/2_lab/2-text-to-sql_redshift.ipynb)
