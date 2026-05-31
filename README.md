@@ -12,13 +12,11 @@ RDB를 조회하여 사용할때 필요한 기능을 정의하고자 합니다.
 
 ## Schema Linking
 
-Text-to-SQL 분야에서 핵심적인 단계 중 하나로, 자연어 질문(Natural Language Question)에 등장하는 단어나 표현을 데이터베이스의 스키마 요소(테이블명, 컬럼명, 값 등)와 연결(매핑)하는 과정입니다. 자연어에는 모호한 표현이 많기 때문에, 어떤 테이블/컬럼을 가리키는지 정확히 파악해야 올바른 SQL을 생성할 수 있습니다. Schema Linking이 잘못되면 엉뚱한 테이블이나 컬럼을 참조하는 SQL이 만들어져 결과가 틀리게 됩니다.
 
-### 주요 방법
+## Agentic Workflow
 
-- 문자열 매칭 - 질문의 단어와 스키마 이름을 직접 비교
-- 임베딩 유사도 - 단어의 의미적 유사도를 벡터로 비교
-- LLM 활용 - GPT 등 대형 언어 모델이 문맥을 파악하여 자동으로 연결
+[Workflow Composition using LangGraph](https://github.com/aws-samples/aws-ai-ml-workshop-kr/tree/master/genai/aws-gen-ai-kr/20_applications/12_advanced_agentic_text2sql#lab-2-workflow-composition-using-langgraph)와 같이 Graph를 이용해 agent를 이용해 좀더 복잡한 경우에도 효과적으로 query문을 생성할 수 있습니다.
+
 
 
 ## 실행 결과
