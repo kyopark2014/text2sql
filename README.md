@@ -301,31 +301,81 @@ def execute_query(query: str) -> str:
 <img width="700" alt="chinook_table" src="./contents/chinook_table.png" />
 
 
+## 프로젝트 구조
+
+본 프로젝트는 **AWS 인프라 자동화 스크립트**(루트), **Text2SQL / Schema Linking 실험 코드**(`labs/`, `database/`), **Streamlit Agent 애플리케이션**(`application/`)으로 구성되어 있습니다.
+
+```
+text2sql/
+├── README.md                  # 프로젝트 개요 및 Text2SQL/MCP 구성 가이드 (본 문서)
+├── chinook-database.md        # Chinook 샘플 DB 설명
+├── text2sql-agent.md          # LangGraph Text2SQL Agent 워크플로 설명
+├── requirements.txt           # Python 패키지 의존성 정의
+│
+├── installer.py               # AWS 인프라 배포 (S3, S3 Vectors, KB, CloudFront)
+├── uninstaller.py             # installer.py가 생성한 리소스 삭제
+│
+├── labs/                      # Schema Linking · SQL2Text 실험
+│   ├── Chinook.db             # 로컬 SQLite DB (SQL 실행 대상)
+│   ├── chinook_schema.json    # 테이블/컬럼 설명 (Schema Linking용)
+│   ├── chinook_sample_queries.sql  # SQL2Text 변환 대상 샘플 SQL
+│   ├── sample_queries.py      # SQL → 자연어 질문 변환 스크립트
+│   └── text2sql.py            # Text2SQL 실험 스크립트
+│
+├── database/                  # Knowledge Base 적재용 샘플·스키마 데이터
+│   ├── example_queries.jsonl  # 자연어+SQL 샘플 (KB docs/ 업로드용)
+│   └── chinook_schema.json    # 스키마 설명 (한글/상세 버전 포함)
+│
+├── contents/                  # Chinook ER 다이어그램·SQL 스크립트 등 정적 자료
+│
+└── application/               # Streamlit 챗봇 / RAG / Agent / Text2SQL 앱
+    ├── app.py                 # Streamlit 진입점 (모드·MCP 선택, 파일 업로드)
+    ├── chat.py                # Bedrock 호출, RAG/이미지 분석 등 채팅 로직
+    ├── text2sql.py            # LangGraph Text2SQL Agent (feedback loop 포함)
+    ├── info.py                # 사용 가능한 Bedrock 모델 카탈로그
+    ├── langgraph_agent.py     # LangGraph ReAct Agent (MCP·Skill 연동)
+    ├── skill.py               # Agent Skill 로더
+    ├── mcp_config.py          # MCP 서버 프로파일 (text2sql, RAG, AWS Docs 등)
+    ├── mcp_retrieve.py        # Knowledge Base retrieve (샘플 쿼리 검색)
+    ├── mcp_text2sql.py        # SQL 생성·실행 핵심 로직
+    ├── mcp_server_text2sql.py # FastMCP Text2SQL 서버 (generate_query, execute_query)
+    ├── mcp_server_retrieve.py # FastMCP KB retrieve 서버
+    ├── mcp_server_text_extraction.py  # FastMCP 텍스트 추출 서버
+    ├── utils.py               # config 로드, KB sync, Secrets Manager 연동
+    ├── notification_queue.py  # Agent 실행 중 UI 알림 큐
+    ├── skills/                # docx/pptx/xlsx 등 Agent Skill 정의
+    └── config.json            # 런타임 설정 (region, KB ID, S3, vector ARN 등)
+```
+
 ## 설치 및 실행
 
-여기서는 [installer.py](./installer.py) 하나로 RAG 시스템 구동에 필요한 AWS 인프라(S3, OpenSearch Serverless, Bedrock Knowledge Base, VPC, ALB, CloudFront, EC2)를 일괄 배포하고, EC2 인스턴스의 User Data 스크립트가 Streamlit 애플리케이션까지 자동으로 기동하도록 설계되어 있습니다.
+Text2SQL은 로컬 SQLite([Chinook DB](./labs/Chinook.db))에서 SQL을 실행하고, Bedrock Knowledge Base에서 유사 샘플 쿼리를 검색(RAG)하여 SQL을 생성합니다. AWS 쪽 인프라는 [installer.py](./installer.py)로 S3, S3 Vectors, Bedrock Knowledge Base, CloudFront를 배포하며, Streamlit 앱과 MCP 서버는 로컬에서 실행합니다.
 
 ### 사전 준비 (Prerequisites)
 
 | 항목 | 요구사항 |
 |------|----------|
-| AWS 계정 | 관리자 권한 또는 인프라 생성 권한 (IAM, S3, EC2, VPC, ALB, CloudFront, OpenSearch Serverless, Bedrock, Secrets Manager) |
-| AWS 리전 | `us-west-2` (기본값, BDA / Nova / Claude 모델 사용 가능 리전) |
-| Bedrock 모델 액세스 | AWS 콘솔 → Bedrock → **Model access** 에서 사용할 모델(Nova, Claude, Titan Embed v2 등) 활성화 필요 |
+| AWS 계정 | IAM, S3, S3 Vectors, Bedrock, CloudFront 생성 권한 |
+| AWS 리전 | `us-west-2` (기본값, Claude / Nova / Titan Embed v2 사용 가능 리전) |
+| Bedrock 모델 액세스 | AWS 콘솔 → Bedrock → **Model access** 에서 SQL 생성용 Claude 모델과 임베딩용 **Titan Embed Text v2** 활성화 |
 | Python | 3.10 이상 |
 | AWS CLI | 자격증명 설정 완료 (`aws configure` 또는 SSO) |
+
+Chinook DB와 스키마 설명(`labs/chinook_schema.json`)은 저장소에 포함되어 있어 별도 DB 설치는 필요 없습니다.
 
 ### 1단계: 저장소 클론 및 의존성 설치
 
 ```bash
-git clone https://github.com/kyopark2014/rag-automation && cd rag-automation
+git clone https://github.com/kyopark2014/text2sql && cd text2sql
 
 pip install -r requirements.txt
 ```
 
+Streamlit UI·LangGraph Agent·MCP 서버 실행에는 `streamlit`, `langchain-aws`, `langgraph`, `langchain-mcp-adapters`, `sqlalchemy`, `mcp` 등 추가 패키지가 필요합니다. `requirements.txt`에 없는 패키지는 import 오류에 따라 설치하세요.
+
 ### 2단계: AWS 자격증명 설정
 
-`installer.py`, `uninstaller.py`, `add_content.py` 모두 boto3 기본 자격증명 체인을 사용합니다. 다음 중 하나를 구성하세요.
+`installer.py`, `uninstaller.py`, Streamlit 앱 모두 boto3 기본 자격증명 체인을 사용합니다. 다음 중 하나를 구성하세요.
 
 ```bash
 aws configure                      # Access Key 방식
@@ -337,58 +387,78 @@ export AWS_PROFILE=<profile>
 기본 리전 및 프로젝트명은 `installer.py` 상단에서 수정할 수 있습니다.
 
 ```python
-project_name = "rag-automation"   # 최소 3자
+project_name = "textsql"   # 최소 3자 (Knowledge Base 이름으로 사용)
 region = "us-west-2"
 ```
 
 ### 3단계: AWS 인프라 배포
 
-루트 디렉터리에서 `installer.py`를 실행하면 약 15~25분에 걸쳐 모든 리소스가 생성됩니다.
+루트 디렉터리에서 `installer.py`를 실행하면 S3 버킷, Knowledge Base IAM 역할, S3 Vectors 벡터 스토어, Bedrock Knowledge Base, CloudFront가 생성됩니다.
 
 ```bash
 python installer.py
 ```
 
-배포가 완료되면 콘솔에 다음 정보가 출력되고 `application/config.json`이 자동으로 채워집니다.
+배포가 완료되면 콘솔에 다음 정보가 출력되고 `application/config.json`이 자동으로 갱신됩니다.
 
 ```
-================================================================
+============================================================
 Infrastructure Deployment Completed Successfully!
-================================================================
+============================================================
   S3 Bucket:           storage-for-rag-project-<account_id>-us-west-2
-  Knowledge Base ID:   XXXXXXXXXX
-  OpenSearch Endpoint: https://xxxxxxxx.us-west-2.aoss.amazonaws.com
-  ALB DNS:             http://alb-for-rag-automation-xxxx.us-west-2.elb.amazonaws.com/
   CloudFront URL:      https://xxxxxxxxx.cloudfront.net
-================================================================
+  S3 Vector Bucket:    textsql-<account_id>
+  Knowledge Base ID:   XXXXXXXXXX
+============================================================
 ```
 
-> CloudFront 배포는 완전히 활성화되기까지 15~20분이 추가로 소요될 수 있습니다. 자세한 옵션(`--run-setup`, `--verify-deployment`)과 생성 리소스 명세는 [`installer.md`](installer.md) 참조.
+> CloudFront 배포는 완전히 활성화되기까지 15~20분이 추가로 소요될 수 있습니다. Knowledge Base는 **S3 Vectors**를 벡터 스토어로 사용하며, OpenSearch Serverless·VPC·ALB·EC2는 생성하지 않습니다.
 
-### 4단계: 문서 적재 및 Knowledge Base 동기화
+### 4단계: 샘플 쿼리 적재 및 Knowledge Base 동기화
 
-배포가 끝나면 streamlit에서 파일을 업로드하고 자동으로 Knowledge Base에서 sync가 수행됩니다. 진행 상황은 AWS 콘솔 → **Bedrock → Knowledge Bases → 데이터 소스 → Sync history** 에서 확인할 수 있습니다.
+Text2SQL은 질문과 유사한 SQL 샘플을 Knowledge Base에서 검색합니다([`mcp_retrieve.py`](./application/mcp_retrieve.py)). 샘플 쿼리는 S3 버킷의 `docs/` prefix 아래에 두고 동기화합니다.
+
+**방법 A — 저장소에 포함된 샘플 사용**
+
+```bash
+aws s3 cp database/example_queries.jsonl \
+  s3://storage-for-rag-project-<account_id>-us-west-2/docs/
+```
+
+**방법 B — SQL2Text로 새 샘플 생성**
+
+[`labs/sample_queries.py`](./labs/sample_queries.py)로 `labs/chinook_sample_queries.sql`을 자연어+SQL JSONL로 변환한 뒤, 위와 같이 `docs/`에 업로드합니다.
+
+업로드 후 Streamlit **RAG** 모드에서 PDF를 업로드하면 자동으로 sync가 실행됩니다. JSONL만 올린 경우에는 AWS 콘솔 → **Bedrock → Knowledge Bases → 데이터 소스 → Sync** 를 수동 실행하거나, 앱을 한 번 실행해 `utils.sync_data_source()`가 호출되도록 합니다. 진행 상황은 **Sync history**에서 확인할 수 있습니다.
 
 ### 로컬에서 애플리케이션 실행
 
-로컬에서 아래처럼 UI를 띄워 테스트할 수도 있습니다. 
-
 ```bash
-streamlit run application/app.py 
+streamlit run application/app.py
 ```
 
-이후 자동으로 브라우저에서 `http://localhost:8501` 로 접속됩니다. Knowledge Base / S3 / Bedrock 호출은 모두 `config.json`에 기록된 리전·KB ID·역할을 통해 이루어집니다.
+브라우저에서 `http://localhost:8501` 로 접속합니다. Text2SQL을 사용하려면 사이드바에서 **Agent (Chat)** 또는 **Text2SQL Agent** 모드를 선택하고, Agent 모드에서는 **text2sql** MCP를 활성화하세요. Bedrock / Knowledge Base / S3 호출은 `application/config.json`의 리전·KB ID·역할 정보를 사용합니다.
+
+MCP 서버만 단독으로 실행하려면:
+
+```bash
+python application/mcp_server_text2sql.py
+```
+
+`generate_query`, `execute_query` 두 도구가 stdio transport로 제공됩니다.
 
 ### 리소스 정리 (Uninstall)
 
-테스트가 끝났다면 `uninstaller.py`로 `installer.py`가 만든 모든 리소스를 안전하게 삭제합니다.
+테스트가 끝났다면 `uninstaller.py`로 프로젝트 전용 리소스를 삭제합니다.
 
 ```bash
-python uninstaller.py            # 확인 프롬프트 표시
-python uninstaller.py --yes      # 프롬프트 없이 즉시 삭제
+python uninstaller.py                              # 확인 프롬프트 표시
+python uninstaller.py --yes                        # 프로젝트 리소스만 즉시 삭제
+python uninstaller.py --yes --delete-s3-bucket     # 공유 S3 버킷도 삭제
+python uninstaller.py --yes --delete-cloudfront    # CloudFront 배포도 삭제
 ```
 
-CloudFront 비활성화에 시간이 걸려 일부 리소스가 남을 수 있으며, 이 경우 안내 메시지에 따라 잠시 후 다시 실행하면 됩니다.
+기본값(`--yes`만 사용)은 Knowledge Base, S3 Vectors, IAM 역할만 삭제하고 S3·CloudFront는 유지합니다. CloudFront 비활성화에 시간이 걸리면 `--delete-cloudfront` 옵션으로 잠시 후 다시 실행하세요.
 
 
 ## 실행결과
