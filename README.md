@@ -216,6 +216,9 @@ SQL: {sql}
 
 [Workflow Composition using LangGraph](https://github.com/aws-samples/aws-ai-ml-workshop-kr/tree/master/genai/aws-gen-ai-kr/20_applications/12_advanced_agentic_text2sql#lab-2-workflow-composition-using-langgraph)와 같이 Graph를 이용해 agent를 이용해 좀더 복잡한 경우에도 효과적으로 query문을 생성할 수 있습니다.
 
+이때의 세부동작은 아래와 같습니다.
+
+<img width="903" height="870" alt="image" src="https://github.com/user-attachments/assets/f472f8c2-c2de-4e4b-8552-30dc5d110b7d" />
 
 
 
@@ -224,6 +227,7 @@ SQL: {sql}
 여기에서는 [Chinook](https://github.com/lerocha/chinook-database/blob/master/README.md)을 활용합니다. 상세한 내용은 [chinook-database.md](./chinook-database.md)을 참조합니다.
 
 <img width="700" alt="chinook_table" src="./contents/chinook_table.png" />
+
 
 
 ## 실행 결과
