@@ -212,6 +212,86 @@ SQL: {sql}
 
 ## Text2SQL MCP
 
+[mcp_server_text2sql.py](./application/mcp_server_text2sql.py)와 같이 MCP 서버를 정의합니다. 여기에서는 아래와 같이 질문으로부터 SQL을 생성하는 tool과 database에 sql 문을 수행하는 tool로 구성됩니다.
+
+```python
+@mcp.tool()
+def generate_query(question: str) -> str:
+    """
+    Generate an SQL statement to query the database.
+    question: Information to retrieve from the database
+    return: Generated SQL statement
+    """
+    return mcp_text2sql.generate_query(question)
+
+@mcp.tool()
+def execute_query(sql: str) -> str:
+    """
+    Execute SQL against the database and return the relevant information.
+    sql: SQL statement to execute
+    return: Result of the SQL execution
+    """
+    return mcp_text2sql.execute_query(sql)
+```
+
+[mcp_text2sql.py](./application/mcp_text2sql.py)에서 generate_query은 RAG로부터 얻어온 sample query들과 table 정보를 이용해 SQL 문을 생성합니다.
+
+```python
+def generate_query(question: str) -> str:
+    sample_queries = get_sample_queries(question)
+
+    table_details = load_schema_description()
+    dialect = "sqlite"
+    
+    system = (
+        "당신은 사용자 질문에 대한 {dialect} SQL 쿼리를 작성하는 유능한 데이터베이스 엔지니어입니다. "
+        "당신의 임무는 주어진 DB 정보를 바탕으로, 사용자 질문에 부합하는 정확한 SQL 쿼리를 작성하는 것입니다.\n"
+        "<result> 태그 안에는 실행 가능한 SQL 문장만 넣으세요. "
+        "주석(--, /* */), 설명, 서두, 마크다운 코드블록 표시는 <result> 안에 포함하지 마세요."
+    )
+
+    human = (
+        "샘플 쿼리·스키마·과거 실패 이력을 바탕으로 {dialect} SQL을 작성하세요.\n"
+        "응답 형식:\n"
+        "- <result> 태그 안: SELECT/WITH 등으로 시작하는 SQL 한 문장만 (세미콜론 생략 가능)\n"
+        "- <result> 태그 밖: 스키마 한계·가정 등 설명이 필요할 때만 작성\n\n"
+        "질문: {question}\n"
+        "샘플 쿼리: {sample_queries}\n"
+        "사용 가능한 테이블: {table_details}\n"
+    )
+
+    prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
+
+    chain = prompt | chat.get_chat()
+
+    response = chain.invoke({
+        "dialect": dialect,
+        "question": question,
+        "sample_queries": sample_queries,
+        "table_details": table_details
+    })
+    logger.info(f"response of generate_query: {response.content}")
+
+    generated_query = extract_sql_query(response.content)
+    logger.info(f"generated_query: {generated_query}")
+
+    return generated_query
+```
+
+이때 얻어진 SQL 문은 아래와 같이 실행되어 관련된 정보를 얻어 올 수 있습니다.
+
+```python
+def execute_query(query: str) -> str:
+    try:
+        query_result = db.run(query)
+        logger.info(f"query result: {query_result}")
+
+    except Exception as e:
+        return f"An error occurred while executing the query: {str(e)}"
+
+    return query_result
+```
+
 
 
 ## Chinook Sample
@@ -220,6 +300,24 @@ SQL: {sql}
 
 <img width="700" alt="chinook_table" src="./contents/chinook_table.png" />
 
+## 실행결과
+
+"tex2sql tool을 이용하여 테이블의 전체 레코드 수 조회하세요."로 입력합니다.
+
+<img width="722" height="791" alt="image" src="https://github.com/user-attachments/assets/d91a9373-2258-4ed4-8173-06afeb8aef6a" />
+
+이때의 최종 결과는 이래와 같습니다.
+
+<img width="672" height="808" alt="image" src="https://github.com/user-attachments/assets/bd039b87-25e2-408c-b0c0-6c9a1efb910b" />
+
+
+"text2sql을 이용해 여름에 듣기 좋은 음악 리스트는?"라고 질문을 하면, feedback loop를 통해 필요한 SQL로 필요한 정보를 수집합니다.
+
+<img width="723" height="795" alt="image" src="https://github.com/user-attachments/assets/c3a12cdb-0644-4c53-8305-b9e04c228267" />
+
+이때의 결과는 아래와 같습니다.
+
+<img width="668" height="708" alt="image" src="https://github.com/user-attachments/assets/dfd54c82-4a3d-4fb0-9ca0-2d10582be6c6" />
 
 
 ## Reference
