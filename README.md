@@ -304,7 +304,8 @@ def execute_query(query: str) -> str:
 
 "tex2sql tool을 이용하여 테이블의 전체 레코드 수 조회하세요."로 입력합니다.
 
-<img width="722" height="791" alt="image" src="https://github.com/user-attachments/assets/d91a9373-2258-4ed4-8173-06afeb8aef6a" />
+<img width="726" height="781" alt="image" src="https://github.com/user-attachments/assets/412125fc-eed5-4df7-adc1-bb3e056ebe01" />
+
 
 이때의 최종 결과는 이래와 같습니다.
 
