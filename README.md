@@ -6,6 +6,8 @@ RDB와 같이 데이터베이스를 조회하기 위한 Text2SQL을 구현하는
 
 <img width="800" alt="image" src="https://github.com/user-attachments/assets/06d71485-f1bb-45ad-974c-14eb438c6f23" />
 
+Text2SQL을 위해서는 [chinook_schema.json](./labs/chinook_schema.json)와 같은 schema 정보가 필요합니다. 이는 필요시 LLM을 이용해서 생성할 수도 있지만, 원할한 진행을 위해 이미 database에 대한 schema 문서가 있다고 가정합니다. Text2SQL의 정확도를 높이기 위해서는 기존에 활용하는 example query가 필요합니다. 이를 활용하기 위해서는 질문에 따라 가장 가까운 sample query 조회가 필요하므로 여기에서는 RAG를 이용해 관련된 sample query들을 수집하여 활용합니다.
+
 ## Schema Linking
 
 Text-to-SQL 분야에서 핵심적인 단계 중 하나로, 자연어 질문(Natural Language Question)에 등장하는 단어나 표현을 데이터베이스의 스키마 요소(테이블명, 컬럼명, 값 등)와 연결(매핑)하는 과정입니다. 자연어에는 모호한 표현이 많기 때문에, 어떤 테이블/컬럼을 가리키는지 정확히 파악해야 올바른 SQL을 생성할 수 있습니다. Schema Linking이 잘못되면 엉뚱한 테이블이나 컬럼을 참조하는 SQL이 만들어져 결과가 틀리게 됩니다. 상세 내용은 [Lab. 1-1 Schema Preparation-1](https://github.com/aws-samples/aws-ai-ml-workshop-kr/blob/master/genai/aws-gen-ai-kr/20_applications/12_advanced_agentic_text2sql/lab1_text2sql_schema_preparation/1.sample_queries.ipynb)을 참조하였습니다.
