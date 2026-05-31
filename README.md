@@ -20,6 +20,32 @@ Text-to-SQL 분야에서 핵심적인 단계 중 하나로, 자연어 질문(Nat
 - 임베딩 유사도 - 단어의 의미적 유사도를 벡터로 비교
 - LLM 활용 - GPT 등 대형 언어 모델이 문맥을 파악하여 자동으로 연결
 
+
+## 실행 결과
+
+아래와 같이 "Text2SQL Agent"을 선택합니다.
+
+<img width="192" height="263" alt="image" src="https://github.com/user-attachments/assets/7b6faf50-2cbe-4bc4-a7db-2ac9fd2b0520" />
+
+
+이후 "테이블의 전체 레코드 수 조회"하면, 기존 schema이므로 아래와 같은 답변을 얻을 수 있습니다.
+
+<img width="729" alt="image" src="https://github.com/user-attachments/assets/798567d7-4841-44e3-a013-8818a692460b" />
+
+최종 결과는 아래와 같습니다.
+
+<img width="675" alt="image" src="https://github.com/user-attachments/assets/27879ea2-83fe-425e-8693-706e0ca748c3" />
+
+
+
+"크리스마스에 듣기 좋은 음악 리스트는?"와 같은 질문을 하면 기존 query에 없으므로 아래와 같이 schema 정보를 이용해 query문을 생성합니다.
+
+
+
+<img width="719" alt="image" src="https://github.com/user-attachments/assets/ea2d21e9-911c-477c-94f6-6e7d1b80f7e5" />
+
+
+
 ## Reference
 
 [Amazon Bedrock과 LangChain을 이용한 "비즈니스 데이터 분석을 위한 자연어 기반 BI"](https://github.com/jesamkim/aws-genai-for-retail/blob/main/2_lab/2-text-to-sql_redshift.ipynb)
