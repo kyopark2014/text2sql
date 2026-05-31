@@ -214,7 +214,21 @@ SQL: {sql}
 }
 ```
 
-Streamlit에서 파일업로드 버튼을 선택한 후에 [example_queries_temp.jsonl](./labs/example_queries_temp.jsonl)를 업로드하면 Knowledge Base를 통해 embedding후 vector로 저장됩니다.
+### 실행
+
+Schema linking은 아래와 같이 수행합니다. [chinook_sample_queries.sql](./labs/chinook_sample_queries.sql)에 있는 SQL문에 대해 [chinook_schema.json](./labs/chinook_schema.json)의 schema 정보를 활용하여 [example_queries_temp.jsonl](./labs/example_queries_temp.jsonl)와 같이 input/query로 된 example query문을 생성합니다.
+
+```bash
+git clone https://github.com/kyopark2014/text2sql
+cd text2sql && python labs/sample_queries.py
+```
+
+아후 아래와 같이 streamlit을 실행하여 파일업로드 버튼을 선택하면 [example_queries_temp.jsonl](./labs/example_queries_temp.jsonl)를 업로드할 수 있습니다. 이후 Knowledge Base의 sync 작업을 통해 embedding된 후, agent에 대해 검색후 활용됩니다.
+
+```bash
+streamlit run application/app.py
+```
+
 
 ## Text2SQL MCP
 
