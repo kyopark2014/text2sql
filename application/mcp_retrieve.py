@@ -148,6 +148,6 @@ def retrieve(query):
                 "from": "RAG"
             }
         })
-    logger.info(f"json_docs: {json_docs}")
+    # logger.info(f"json_docs: {json_docs}")
 
     return json.dumps(json_docs, ensure_ascii=False)

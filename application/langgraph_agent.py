@@ -62,6 +62,52 @@ from pathlib import Path
 WORKING_DIR = os.path.dirname(os.path.abspath(__file__))
 ARTIFACTS_DIR = os.path.join(WORKING_DIR, "artifacts")
 
+def _chinook_db_has_tables(path: str) -> bool:
+    import sqlite3
+
+    if not os.path.isfile(path) or os.path.getsize(path) == 0:
+        return False
+    try:
+        with sqlite3.connect(path) as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
+            ).fetchone()
+            return bool(row and row[0] > 0)
+    except Exception:
+        return False
+
+def _resolve_chinook_db_path() -> str:
+    candidates = [
+        os.path.join(WORKING_DIR, "..", "labs", "Chinook.db"),
+        os.path.join(WORKING_DIR, "..", "contents", "Chinook.db"),
+    ]
+    for path in candidates:
+        abs_path = os.path.abspath(path)
+        if _chinook_db_has_tables(abs_path):
+            return abs_path
+    return os.path.abspath(candidates[0])
+
+CHINOOK_DB_PATH = _resolve_chinook_db_path()
+
+def _load_chinook_schema_summary() -> str:
+    import sqlite3
+
+    lines = []
+    try:
+        with sqlite3.connect(CHINOOK_DB_PATH) as conn:
+            tables = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+            ).fetchall()
+            for (table,) in tables:
+                cols = conn.execute(f"PRAGMA table_info({table})").fetchall()
+                col_names = ", ".join(col[1] for col in cols)
+                lines.append(f"{table}: {col_names}")
+    except Exception as e:
+        logger.warning(f"Failed to load Chinook schema: {e}")
+    return "\n".join(lines)
+
+CHINOOK_SCHEMA = _load_chinook_schema_summary()
+
 ARTIFACT_EXT = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx"})
 
 _mpl_runtime_ready = False
@@ -185,6 +231,8 @@ _exec_globals = {
     "requests": _requests,
     "WORKING_DIR": WORKING_DIR,
     "ARTIFACTS_DIR": ARTIFACTS_DIR,
+    "CHINOOK_DB_PATH": CHINOOK_DB_PATH,
+    "CHINOOK_SCHEMA": CHINOOK_SCHEMA,
 }
 
 @tool
@@ -213,6 +261,9 @@ def execute_code(code: str) -> str:
     Path variables (pre-defined, do NOT redefine):
     - WORKING_DIR: absolute path to application directory
     - ARTIFACTS_DIR: absolute path to artifacts directory (WORKING_DIR/artifacts)
+    - CHINOOK_DB_PATH: absolute path to Chinook SQLite database (labs/Chinook.db;
+      always use this; never open relative paths like 'Chinook.db')
+    - CHINOOK_SCHEMA: table/column summary for Chinook DB (use only listed columns in SQL)
 
     Args:
         code: Python code to execute.

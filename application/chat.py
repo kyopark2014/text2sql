@@ -185,8 +185,8 @@ def get_max_output_tokens(model_id: str = "") -> int:
 def get_chat():
     global selected_chat, model_type
 
-    logger.info(f"models: {models}")
-    logger.info(f"selected_chat: {selected_chat}")
+    # logger.info(f"models: {models}")
+    #logger.info(f"selected_chat: {selected_chat}")
     
     profile = models[selected_chat]
     # print('profile: ', profile)

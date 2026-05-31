@@ -12,6 +12,7 @@ import asyncio
 import io
 import langgraph_agent
 import skill
+import text2sql
 
 from notification_queue import NotificationQueue
 
@@ -43,6 +44,9 @@ mode_descriptions = {
     "Agent (Chat)": [
         "SKILL과 MCP를 활용한 Agent를 이용합니다. 채팅 히스토리를 이용해 interative한 대화를 즐길 수 있습니다."
     ],
+    "Text2SQL Agent": [
+        "Text2SQL Agent를 이용합니다. 사용자의 질문을 SQL 쿼리로 변환하여 조회합니다."
+    ],
     "번역하기": [
         "한국어와 영어에 대한 번역을 제공합니다. 한국어로 입력하면 영어로, 영어로 입력하면 한국어로 번역합니다."        
     ],
@@ -65,13 +69,13 @@ with st.sidebar:
     
     # radio selection
     mode = st.radio(
-        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agent", "Agent (Chat)", "이미지 분석", "번역하기"], index=3
+        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agent", "Agent (Chat)", "Text2SQL Agent", "이미지 분석", "번역하기"], index=3
     )   
     st.info(mode_descriptions[mode][0])
     
     # mcp selection    
     mcp_options = [
-        "s3_vector", 
+        "RAG", 
         "aws_documentation", 
         "web_fetch",
         "text_extraction",
@@ -103,7 +107,7 @@ with st.sidebar:
 
         # Change radio to checkbox        
         mcp_selections = {}
-        default_selections = ["s3_vector"]
+        default_selections = ["RAG"]
         
         with st.expander("MCP 옵션 선택", expanded=True):
             for option in mcp_options:
@@ -400,6 +404,17 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                 logger.info(f"url: {url}")
                 file_name = url[url.rfind('/')+1:]
                 st.image(url, caption=file_name, use_container_width=True)
+
+        elif mode == "Text2SQL Agent":
+            with st.status("thinking...", expanded=True, state="running") as status:         
+                notification_queue = NotificationQueue(container=status)
+
+                response = asyncio.run(text2sql.text2sql_agent(
+                    query=prompt,
+                    notification_queue=notification_queue))
+                logger.info(f"response: {response}")
+
+                st.session_state.messages.append({"role": "assistant", "content": response})
 
         elif mode == '번역하기':
             response = chat.translate_text(prompt)

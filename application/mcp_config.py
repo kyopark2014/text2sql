@@ -65,7 +65,7 @@ def get_secret_value(secret_name):
         return None
 
 def load_config(mcp_type):
-    if mcp_type == "s3_vector":
+    if mcp_type == "RAG":
         mcp_type = "kb-retrieve"    
     
     if mcp_type == "kb-retrieve":
