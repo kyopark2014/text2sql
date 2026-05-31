@@ -27,8 +27,12 @@ Text-to-SQL 분야에서 핵심적인 단계 중 하나로, 자연어 질문(Nat
 
 <img width="192" height="263" alt="image" src="https://github.com/user-attachments/assets/7b6faf50-2cbe-4bc4-a7db-2ac9fd2b0520" />
 
+"Track 테이블의 전체 재생 시간"을 입력하면 기존 검색이므로 아래와 같은 답변을 얻을 수 있습니다.
 
-이후 "테이블의 전체 레코드 수 조회"하면, 기존 schema이므로 아래와 같은 답변을 얻을 수 있습니다.
+<img width="725" alt="image" src="https://github.com/user-attachments/assets/a36569cb-a70e-4028-a22b-d20ac5129ea1" />
+
+
+이후 "테이블의 전체 레코드 수 조회"하면, 유사한 schema를 활용하여 아래와 같은 검색을 수행합니다.
 
 <img width="729" alt="image" src="https://github.com/user-attachments/assets/798567d7-4841-44e3-a013-8818a692460b" />
 
