@@ -10,41 +10,135 @@ Text2SQL을 위해서는 [chinook_schema.json](./labs/chinook_schema.json)와 �
 
 ```mermaid
 flowchart TB
-  subgraph UI["Streamlit (app.py)"]
-    MODE[Text2SQL Agent]
+  USER([사용자])
+
+  subgraph UI["Streamlit UI — app.py"]
+    direction TB
+    SIDEBAR["Sidebar: 모델 선택 · Skill/MCP 설정"]
+    MODE{"모드 선택"}
+    SIDEBAR --- MODE
+
+    MODE -->|일상적인 대화| CHAT_CONV["chat.general_conversation"]
+    MODE -->|RAG| CHAT_RAG["chat.run_rag_with_knowledge_base"]
+    MODE -->|Agent| LG_AGENT["langgraph_agent.run_langgraph_agent<br/>history_mode=Disable"]
+    MODE -->|"Agent (Chat)"| LG_CHAT["langgraph_agent.run_langgraph_agent<br/>history_mode=Enable"]
+    MODE -->|Text2SQL Agent| T2S_ENTRY["text2sql.text2sql_agent"]
+    MODE -->|번역하기| CHAT_TR["chat.translate_text"]
+    MODE -->|이미지 분석| CHAT_IMG["chat.summarize_image"]
   end
 
-  subgraph LLM["Amazon Bedrock"]
-    BR[Bedrock Runtime / ChatBedrock]
-    KB[(Knowledge Base<br/>S3 Vector)]
+  USER --> MODE
+
+  subgraph BEDROCK["Amazon Bedrock"]
+    direction TB
+    BR_RT["Bedrock Runtime<br/>invoke_model_with_response_stream"]
+    CHAT_BR["ChatBedrock<br/>LangChain"]
+    BAR["Bedrock Agent Runtime<br/>retrieve"]
+    KB[("Knowledge Base<br/>S3 Vector")]
+    BAR --> KB
   end
 
-  subgraph Text2SQLStack["Text2SQL Agent (text2sql.py)"]
-    TSA[text2sql_agent]
-    TSG["sample query → schema linking → SQL 생성/검증/실행"]
-    MR[mcp_retrieve.retrieve]
-    SCH[chinook_schema.json]
-    DB[(Chinook.db SQLite)]
+  subgraph DATA["데이터 · 스키마 · 참조 문서"]
+    direction TB
+    SCH["labs/chinook_schema.json<br/>테이블·컬럼 설명"]
+    DB[("labs/Chinook.db<br/>SQLite")]
+    S3[("Amazon S3 docs/<br/>example query JSONL")]
+    CF["CloudFront → S3<br/>근거 문서 링크"]
+    S3 --> CF
   end
 
-  subgraph MCPServer["Text2SQL MCP (mcp_server_text2sql.py)"]
-    T2S["generate_query / execute_query"]
+  CHAT_CONV --> BR_RT
+  CHAT_RAG --> BAR
+  CHAT_RAG --> BR_RT
+  CHAT_TR --> CHAT_BR
+  CHAT_IMG --> CHAT_BR
+
+  subgraph LG["LangGraph Agent — langgraph_agent.py"]
+    direction TB
+    LG_GRAPH["StateGraph: agent ⇄ action<br/>skill_mode=Enable 시 Skill 도구 추가"]
+    CHECK["MemorySaver checkpointer<br/>Agent Chat 모드만"]
+    TOOLS["ToolNode: MCP 도구 + Skill 도구"]
+    LG_GRAPH --> TOOLS
+    LG_CHAT -.-> CHECK
+    CHECK -.-> LG_GRAPH
   end
 
-  MODE --> TSA
-  MODE --> T2S
+  LG_AGENT --> LG_GRAPH
+  LG_CHAT --> LG_GRAPH
+  LG_GRAPH --> CHAT_BR
 
-  TSA --> TSG
-  TSG --> MR
-  TSG --> SCH
-  TSG --> DB
-  TSG --> BR
-  MR --> KB
+  subgraph MCP["MCP Servers — mcp_config.py / FastMCP"]
+    direction LR
+    MCP_T2S["text2sql<br/>mcp_server_text2sql.py"]
+    MCP_KB["kb-retrieve<br/>mcp_server_retrieve.py"]
+    MCP_AWS["aws_documentation"]
+    MCP_WEB["web_fetch"]
+    MCP_TEX["text_extraction"]
+    MCP_UD["사용자 설정<br/>user_defined_mcp.json"]
+  end
 
-  T2S --> MR
-  T2S --> SCH
-  T2S --> DB
-  T2S --> BR
+  TOOLS --> MCP
+
+  subgraph MCP_T2S_IMPL["text2sql MCP — mcp_text2sql.py"]
+    MCP_GEN["generate_query"]
+    MCP_EXE["execute_query"]
+  end
+
+  MCP_T2S --> MCP_GEN
+  MCP_T2S --> MCP_EXE
+  MCP_GEN --> MR
+  MCP_GEN --> SCH
+  MCP_GEN --> CHAT_BR
+  MCP_EXE --> DB
+
+  subgraph T2S["Text2SQL Agent — text2sql.py · LangGraph StateGraph"]
+    direction TB
+
+    N1["1. get_sample_queries"]
+    N2["2. check_readiness<br/>Ready / Not Ready"]
+    N3["3. get_relevant_tables<br/>schema linking"]
+    N4["4. describe_schema<br/>선별 테이블 상세"]
+    N5["5. generate_query"]
+    N6["6. validate_query"]
+    N7["7. execute_query"]
+    N8["8. handle_failure<br/>schema / syntax / retry"]
+    N9["9. get_relevant_columns"]
+    N10["10. get_database_answer<br/>자연어 답변 스트리밍"]
+
+    N1 --> N2
+    N2 -->|Ready| N5
+    N2 -->|Not Ready| N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+    N6 -->|success| N7
+    N6 -->|error| N8
+    N7 -->|success| N10
+    N7 -->|error| N8
+    N8 -->|schema_check| N9
+    N8 -->|syntax_check| N5
+    N8 -->|retry| N6
+    N8 -->|stop| N10
+    N9 --> N5
+  end
+
+  T2S_ENTRY --> T2S
+  N1 --> MR["mcp_retrieve.retrieve"]
+  MR --> BAR
+  N2 & N3 & N5 & N6 & N8 & N9 & N10 --> CHAT_BR
+  N4 --> SCH
+  N4 --> DB
+  N7 --> DB
+  BAR -.->|example query 검색| S3
+
+  subgraph SKILLS["Skills — skill.py"]
+    direction LR
+    SK1["docx / xlsx / pptx"]
+    SK2["skill-creator"]
+    SK3["기타 사용자 Skill"]
+  end
+
+  TOOLS --> SKILLS
 ```
 
 | 모드 | 모듈 | 설명 |
