@@ -11,8 +11,7 @@ Text2SQL을 위해서는 [chinook_schema.json](./labs/chinook_schema.json)와 �
 ```mermaid
 flowchart TB
   subgraph UI["Streamlit (app.py)"]
-    MODE[대화 모드 선택]
-    SKUI[Skill / MCP 선택]
+    MODE[Text2SQL Agent]
   end
 
   subgraph LLM["Amazon Bedrock"]
@@ -20,67 +19,32 @@ flowchart TB
     KB[(Knowledge Base<br/>S3 Vector)]
   end
 
-  subgraph Skills["Agent Skills (skill.py)"]
-    SRC["skills/*/SKILL.md"]
-    BSP[build_skill_prompt]
-    GSI[get_skill_instructions]
-  end
-
-  subgraph LangGraphStack["LangGraph Agent (langgraph_agent.py)"]
-    RLA[run_langgraph_agent]
-    CA[create_agent]
-    SG["StateGraph: agent ↔ action"]
-    MSMC[MultiServerMCPClient]
-    BT["Built-in: execute_code, read/write_file, bash, get_current_time, upload_file_to_s3"]
-  end
-
   subgraph Text2SQLStack["Text2SQL Agent (text2sql.py)"]
     TSA[text2sql_agent]
-    TSG["LangGraph: sample query → schema linking → SQL 생성/실행"]
+    TSG["sample query → schema linking → SQL 생성/검증/실행"]
     MR[mcp_retrieve.retrieve]
     SCH[chinook_schema.json]
     DB[(Chinook.db SQLite)]
   end
 
-  subgraph MCPServers["MCP Servers (mcp_config.py)"]
-    RAG[kb-retrieve]
-    T2S[text2sql]
-    AWS[aws_documentation]
-    WF[web_fetch]
-    TE[text_extraction]
+  subgraph MCPServer["Text2SQL MCP (mcp_server_text2sql.py)"]
+    T2S["generate_query / execute_query"]
   end
 
-  subgraph Storage["Artifacts / S3"]
-    ART[artifacts/]
-    S3[(S3)]
-  end
-
-  MODE --> RLA
   MODE --> TSA
-  MODE --> BR
-  SKUI -->|skill_list| BSP
-
-  RLA --> CA
-  CA --> SG
-  CA --> MSMC
-  CA --> BT
-  CA --> GSI
-  BSP -->|system_prompt| CA
-  GSI --> SRC
-  SG --> BR
-  MSMC --> MCPServers
-  RAG --> KB
-  T2S --> MR
-  T2S --> DB
+  MODE --> T2S
 
   TSA --> TSG
   TSG --> MR
   TSG --> SCH
   TSG --> DB
-  MR --> KB
   TSG --> BR
-  BT --> ART
-  BT --> S3
+  MR --> KB
+
+  T2S --> MR
+  T2S --> SCH
+  T2S --> DB
+  T2S --> BR
 ```
 
 | 모드 | 모듈 | 설명 |
