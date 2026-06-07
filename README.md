@@ -6,6 +6,94 @@
 
 Text2SQL을 위해서는 [chinook_schema.json](./labs/chinook_schema.json)와 같은 schema 정보가 필요합니다. 이는 데이터베이스 관리자가 기존에 관리하던 schema 정보를 활용하여 작성하여야 하며, 만약 LLM을 이용해 신규로 작성한다면 담당자 확인을 통해 정확한 정보가 반영되도록 하여야 합니다. 이후 Text2SQL의 정확도를 높이기 위해 example query문을 생성합니다. 이 example query는 기존에 활용하거나 성공한 SQL문과 용도를 json형태로 정리한것으로서, schema 문서에 있는 table, column정보와 함께 SQL문 생성의 정확도에 중요한 역할을 합니다. 이와같이 agent는 사용자의 질문에 답하기 위해 데이터베이스 조회가 필요하다고 생각이 되면 text2sql 도구를 통해 RAG로 부터 example query문을 검색하고 schema 정보를 함께 활용하여, 적절한 SQL문을 생성하여 데이터베이스를 조회하게 됩니다. 
 
+## Operation Architecture
+
+```mermaid
+flowchart TB
+  subgraph UI["Streamlit (app.py)"]
+    MODE[대화 모드 선택]
+    SKUI[Skill / MCP 선택]
+  end
+
+  subgraph LLM["Amazon Bedrock"]
+    BR[Bedrock Runtime / ChatBedrock]
+    KB[(Knowledge Base<br/>S3 Vector)]
+  end
+
+  subgraph Skills["Agent Skills (skill.py)"]
+    SRC["skills/*/SKILL.md"]
+    BSP[build_skill_prompt]
+    GSI[get_skill_instructions]
+  end
+
+  subgraph LangGraphStack["LangGraph Agent (langgraph_agent.py)"]
+    RLA[run_langgraph_agent]
+    CA[create_agent]
+    SG["StateGraph: agent ↔ action"]
+    MSMC[MultiServerMCPClient]
+    BT["Built-in: execute_code, read/write_file, bash, get_current_time, upload_file_to_s3"]
+  end
+
+  subgraph Text2SQLStack["Text2SQL Agent (text2sql.py)"]
+    TSA[text2sql_agent]
+    TSG["LangGraph: sample query → schema linking → SQL 생성/실행"]
+    MR[mcp_retrieve.retrieve]
+    SCH[chinook_schema.json]
+    DB[(Chinook.db SQLite)]
+  end
+
+  subgraph MCPServers["MCP Servers (mcp_config.py)"]
+    RAG[kb-retrieve]
+    T2S[text2sql]
+    AWS[aws_documentation]
+    WF[web_fetch]
+    TE[text_extraction]
+  end
+
+  subgraph Storage["Artifacts / S3"]
+    ART[artifacts/]
+    S3[(S3)]
+  end
+
+  MODE --> RLA
+  MODE --> TSA
+  MODE --> BR
+  SKUI -->|skill_list| BSP
+
+  RLA --> CA
+  CA --> SG
+  CA --> MSMC
+  CA --> BT
+  CA --> GSI
+  BSP -->|system_prompt| CA
+  GSI --> SRC
+  SG --> BR
+  MSMC --> MCPServers
+  RAG --> KB
+  T2S --> MR
+  T2S --> DB
+
+  TSA --> TSG
+  TSG --> MR
+  TSG --> SCH
+  TSG --> DB
+  MR --> KB
+  TSG --> BR
+  BT --> ART
+  BT --> S3
+```
+
+| 모드 | 모듈 | 설명 |
+|------|------|------|
+| 일상적인 대화 | `chat.general_conversation` | 대화 이력 + Bedrock Runtime `invoke_model_with_response_stream` 스트리밍 |
+| RAG | `chat.run_rag_with_knowledge_base` | Bedrock Knowledge Base 검색(`retrieve`) 후 Bedrock Runtime으로 답변 생성 |
+| **Agent** | `langgraph_agent.run_langgraph_agent` | LangGraph + MCP + Skills (채팅 히스토리 비활성) |
+| **Agent (Chat)** | `langgraph_agent.run_langgraph_agent` | LangGraph + MCP + Skills + LangGraph checkpointer로 대화 이력 유지 |
+| **Text2SQL Agent** | `text2sql.text2sql_agent` | KB에서 example query 검색 → schema linking → SQL 생성/검증/실행 → 자연어 답변 |
+| 번역하기 | `chat.translate_text` | 한국어 ↔ 영어 번역 |
+| 이미지 분석 | `chat.summarize_image` | ChatBedrock 멀티모달 (이미지 + 텍스트) 분석 |
+
+
 ## Schema Linking
 
 Text-to-SQL 분야에서 핵심적인 단계 중 하나로, 자연어 질문(Natural Language Question)에 등장하는 단어나 표현을 데이터베이스의 스키마 요소(테이블명, 컬럼명, 값 등)와 연결(매핑)하는 과정입니다. 자연어에는 모호한 표현이 많기 때문에, 어떤 테이블/컬럼을 가리키는지 정확히 파악해야 올바른 SQL을 생성할 수 있습니다. Schema Linking이 잘못되면 엉뚱한 테이블이나 컬럼을 참조하는 SQL이 만들어져 결과가 틀리게 됩니다. 여기에서는 [Lab. 1-1 Schema Preparation-1](https://github.com/aws-samples/aws-ai-ml-workshop-kr/blob/master/genai/aws-gen-ai-kr/20_applications/12_advanced_agentic_text2sql/lab1_text2sql_schema_preparation/1.sample_queries.ipynb)을 참조하였습니다.
