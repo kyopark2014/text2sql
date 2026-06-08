@@ -113,3 +113,4 @@ Glue database의 Table에 접속해서 businfo를 선택하면 아래와 같은 
 }
 ```
 
+[athena_queries.jsonl](./athena/athena_queries.jsonl)을 Amazon S3에 복사하고 Knowledge Base에서 sync를 하면 준비가 완료됩니다.
