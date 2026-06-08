@@ -11,9 +11,11 @@
 
 
 
-Glue database의 Table에 접속해서 businfo를 선택하면 아래와 같은 table 정보를 확인할 수 있습니다.
+Glue database의 Table에 접속해서 businfo를 선택하면 아래와 같은 schema 정보를 확인할 수 있습니다.
 
 <img width="684" height="280" alt="image" src="https://github.com/user-attachments/assets/8d809ab7-813c-46cb-bf83-128519d0bb6c" />
+
+이 schema 정보를 json으로 추출하면 아래와 같습니다.
 
 ```java
 [
