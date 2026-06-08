@@ -114,3 +114,11 @@ Glue database의 Table에 접속해서 businfo를 선택하면 아래와 같은 
 ```
 
 [athena_queries.jsonl](./athena/athena_queries.jsonl)을 Amazon S3에 복사하고 Knowledge Base에서 sync를 하면 준비가 완료됩니다.
+
+이제 agent로 접속해서 "athena로 지난 3일간 잔여 좌석이 0인 버스 도착 정보 건수 조회해주세요."와 같이 명령을 입력합니다.
+
+<img width="721" height="733" alt="image" src="https://github.com/user-attachments/assets/1e8fe64f-b87b-4e81-b7fb-7b0e455f02d1" />
+
+이때의 결과는 아래와 같습니다.
+
+<img width="667" height="496" alt="image" src="https://github.com/user-attachments/assets/5a938c93-7ee1-470a-89b0-c34a2fae0a99" />
