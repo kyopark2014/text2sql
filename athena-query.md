@@ -45,10 +45,10 @@ Glue database의 Table에 접속해서 businfo를 선택하면 아래와 같은 
 이후 아래와 같이 변환합니다.
 
 ```bash
-@athena/schema.json 을 @athena/chinook_schema.json 와 같은 형태로 변환하여 @athena/athean_schema.json 에 저장하세요.
+@athena/schema.json 을 @athena/chinook_schema.json 와 같은 형태로 변환하여 @athena/athena_schema.json 에 저장하세요.
 ```
 
-이때 얻어진 [athean_schema.json](./athena/athean_schema.json)은 아래와 같습니다.
+이때 얻어진 [athean_schema.json](./athena/athena_schema.json)은 아래와 같습니다.
 
 ```java
 [
@@ -88,5 +88,28 @@ Glue database의 Table에 접속해서 businfo를 선택하면 아래와 같은 
 @athena/sample_queries.sql 는 @athena/athean_schema.json 을 참조하여 @athena/chinook_sample_queries.sql 과 형태로 작성하여 주세요. 예제는 5개정도 만들어주세요.
 ```
 
+이때 생성된 [athena_queries.jsonl](./athena/athena_queries.jsonl)은 아래와 같습니다.
 
+```java
+{
+  "input": "버스 도착 정보 전체 조회",
+  "query": "SELECT * FROM bus_arrival"
+}
+{
+  "input": "버스 도착 정보 테이블에서 첫 번째 행의 노선 ID와 동일한 모든 도착 정보 조회",
+  "query": "SELECT * FROM bus_arrival WHERE routeid = (SELECT routeid FROM bus_arrival LIMIT 1)"
+}
+{
+  "input": "bus_arrival 테이블의 전체 잔여 좌석 수 합계 조회",
+  "query": "SELECT SUM(remainseatcnt) FROM bus_arrival"
+}
+{
+  "input": "잔여 좌석이 0인 버스 도착 정보 건수 조회",
+  "query": "SELECT COUNT(*) FROM bus_arrival WHERE remainseatcnt = 0"
+}
+{
+  "input": "평균 잔여 좌석 수가 많은 상위 5개 버스 노선 조회",
+  "query": "SELECT routeid, AVG(remainseatcnt) AS AvgRemainSeats FROM bus_arrival GROUP BY routeid ORDER BY AvgRemainSeats DESC LIMIT 5"
+}
+```
 
