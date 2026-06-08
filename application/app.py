@@ -80,6 +80,7 @@ with st.sidebar:
         "aws_documentation", 
         "web_fetch",
         "text_extraction",
+        "athena",
         "사용자 설정"
     ]    
     if mode=='Agent' or mode=='Agent (Chat)':

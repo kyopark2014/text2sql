@@ -1,0 +1,45 @@
+[
+    {
+        "bus_arrival": {
+            "table_desc": "Stores real-time bus arrival information including route, vehicle, remaining seats, and predicted arrival time.",
+            "cols": [
+                {
+                    "col": "timestamp",
+                    "col_desc": "Timestamp when the bus arrival data was recorded."
+                },
+                {
+                    "col": "routeid",
+                    "col_desc": "Identifier of the bus route."
+                },
+                {
+                    "col": "remainseatcnt",
+                    "col_desc": "Number of remaining seats on the bus."
+                },
+                {
+                    "col": "plateno",
+                    "col_desc": "License plate number of the bus vehicle."
+                },
+                {
+                    "col": "predicttime",
+                    "col_desc": "Predicted arrival time of the bus at the stop."
+                },
+                {
+                    "col": "partition_0",
+                    "col_desc": "Partition key (0) for data organization."
+                },
+                {
+                    "col": "partition_1",
+                    "col_desc": "Partition key (1) for data organization."
+                },
+                {
+                    "col": "partition_2",
+                    "col_desc": "Partition key (2) for data organization."
+                },
+                {
+                    "col": "partition_3",
+                    "col_desc": "Partition key (3) for data organization."
+                }
+            ]
+        }
+    }
+]

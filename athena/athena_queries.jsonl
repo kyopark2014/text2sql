@@ -1,0 +1,20 @@
+{
+  "input": "버스 도착 정보 전체 조회",
+  "query": "SELECT * FROM bus_arrival"
+}
+{
+  "input": "버스 도착 정보 테이블에서 첫 번째 행의 노선 ID와 동일한 모든 도착 정보 조회",
+  "query": "SELECT * FROM bus_arrival WHERE routeid = (SELECT routeid FROM bus_arrival LIMIT 1)"
+}
+{
+  "input": "bus_arrival 테이블의 전체 잔여 좌석 수 합계 조회",
+  "query": "SELECT SUM(remainseatcnt) FROM bus_arrival"
+}
+{
+  "input": "잔여 좌석이 0인 버스 도착 정보 건수 조회",
+  "query": "SELECT COUNT(*) FROM bus_arrival WHERE remainseatcnt = 0"
+}
+{
+  "input": "평균 잔여 좌석 수가 많은 상위 5개 버스 노선 조회",
+  "query": "SELECT routeid, AVG(remainseatcnt) AS AvgRemainSeats FROM bus_arrival GROUP BY routeid ORDER BY AvgRemainSeats DESC LIMIT 5"
+}

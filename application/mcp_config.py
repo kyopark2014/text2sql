@@ -120,6 +120,16 @@ def load_config(mcp_type):
                 }
             }
         }
+
+    elif mcp_type == "athena":
+        return {
+            "mcpServers": {
+                "athena": {
+                    "command": "python",
+                    "args": [f"{workingDir}/mcp_server_athena.py"]
+                }
+            }
+        }
     
     elif mcp_type == "사용자 설정":
         return mcp_user_config
