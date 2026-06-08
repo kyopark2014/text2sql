@@ -82,4 +82,11 @@ Glue database의 Table에 접속해서 businfo를 선택하면 아래와 같은 
 ]
 ```
 
+아래와 같이 [sample_queries.sql](./athena/sample_queries.sql)을 생성합니다.
+
+```bash
+@athena/sample_queries.sql 는 @athena/athean_schema.json 을 참조하여 @athena/chinook_sample_queries.sql 과 형태로 작성하여 주세요. 예제는 5개정도 만들어주세요.
+```
+
+
 
