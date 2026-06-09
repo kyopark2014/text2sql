@@ -13,6 +13,9 @@ from sqlalchemy import create_engine
 from langchain_community.utilities import SQLDatabase
 
 WORKING_DIR = os.path.dirname(os.path.abspath(__file__))
+EXAMPLE_QUERIES_PATH = os.path.normpath(
+    os.path.join(WORKING_DIR, "..", "labs", "example_queries_temp.jsonl")
+)
 
 engine = create_engine(f"sqlite:///{langgraph_agent.CHINOOK_DB_PATH}")
 db = SQLDatabase(engine)
@@ -118,6 +121,34 @@ def generate_query(question: str) -> str:
     logger.info(f"generated_query: {generated_query}")
 
     return generated_query
+
+
+def is_execution_error(result: str) -> bool:
+    return isinstance(result, str) and result.startswith("An error occurred")
+
+
+def save_example_query(input_text: str, query: str) -> bool:
+    """성공한 질문-SQL 쌍을 labs/example_queries_temp.jsonl에 추가합니다."""
+    input_text = input_text.strip()
+    query = query.strip().rstrip(";").strip()
+    if not input_text or not query:
+        return False
+
+    entry = {"input": input_text, "query": query}
+    serialized = json.dumps(entry, ensure_ascii=False, indent=2)
+
+    if os.path.exists(EXAMPLE_QUERIES_PATH):
+        with open(EXAMPLE_QUERIES_PATH, "r", encoding="utf-8") as f:
+            if serialized in f.read():
+                logger.info("example query already exists, skipping append")
+                return False
+
+    os.makedirs(os.path.dirname(EXAMPLE_QUERIES_PATH), exist_ok=True)
+    with open(EXAMPLE_QUERIES_PATH, "a", encoding="utf-8") as f:
+        f.write(serialized + "\n")
+
+    logger.info(f"saved example query to {EXAMPLE_QUERIES_PATH}")
+    return True
 
 
 def execute_query(query: str) -> str:
