@@ -1,4 +1,9 @@
 langchain-aws
+langchain
+langchain-openai
+openai>=2.41.0
 langchain-community
+langchain-text-splitters
+boto3
 opensearch-py
 PyYAML
