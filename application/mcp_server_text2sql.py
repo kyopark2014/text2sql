@@ -2,7 +2,7 @@ import logging
 import sys
 import mcp_text2sql
 
-from mcp.server.fastmcp import FastMCP 
+from mcp.server.mcpserver import MCPServer 
 
 logging.basicConfig(
     level=logging.INFO,  # Default to INFO level
@@ -14,7 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger("text2sql-server")
 
 try:
-    mcp = FastMCP(
+    mcp = MCPServer(
         name = "mcp-text2sql",
     )
     logger.info("MCP server initialized successfully")
